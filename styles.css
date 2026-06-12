@@ -810,6 +810,38 @@ body.fb-picking * { cursor: crosshair !important; }
   animation: spin .8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Full-guide build: live buffer animation */
+.wizard-generating { gap: 14px; padding: 28px 0 18px; }
+.gen-yarn {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 40%, var(--surface2), var(--surface));
+  box-shadow: 0 0 0 3px var(--surface2);
+  animation: gen-bob 1.6s ease-in-out infinite;
+}
+.gen-yarn-ball { font-size: 34px; animation: gen-spin 3s linear infinite; }
+@keyframes gen-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes gen-spin { to { transform: rotate(360deg); } }
+.gen-status { font-size: .95rem !important; color: var(--text) !important; font-weight: 600; margin: 0; }
+.gen-substatus { font-size: .82rem !important; color: var(--accent) !important; margin: 0; min-height: 1.1em; }
+.gen-hint { font-size: .76rem !important; color: var(--text-muted) !important; opacity: .8; margin-top: 4px; }
+.gen-progress-track {
+  width: 80%; max-width: 260px; height: 8px; border-radius: 999px;
+  background: var(--surface2); overflow: hidden; position: relative;
+}
+.gen-progress-fill {
+  height: 100%; width: 8%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  transition: width .5s ease; position: relative; overflow: hidden;
+}
+.gen-progress-fill::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+  transform: translateX(-100%); animation: gen-shimmer 1.4s linear infinite;
+}
+@keyframes gen-shimmer { to { transform: translateX(100%); } }
+
 .wizard-materials {
   background: var(--surface2); border-radius: 10px; padding: 12px 14px;
   display: flex; flex-direction: column; gap: 6px;
@@ -959,3 +991,57 @@ body.fb-picking * { cursor: crosshair !important; }
 .guide-progress-block { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
 .guide-prog-controls { display: flex; align-items: center; gap: 10px; justify-content: center; }
 .guide-prog-val { font-size: .85rem; color: var(--text); min-width: 140px; text-align: center; }
+
+/* ⚠️ Watch-out warnings */
+.section-warning {
+  background: rgba(251,191,36,0.08);
+  border-left: 3px solid #fbbf24;
+  border-radius: 0 6px 6px 0;
+  padding: 8px 12px;
+  font-size: .82rem;
+  color: #fbbf24;
+  line-height: 1.5;
+}
+
+/* Garment overview panel */
+.guide-overview {
+  background: var(--surface);
+  border: 1px solid var(--surface2);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.guide-overview-toggle {
+  width: 100%; background: none; border: none;
+  padding: 10px 14px; text-align: left;
+  color: var(--text-muted); font-size: .8rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.guide-overview-toggle:hover { background: rgba(255,255,255,.03); }
+.guide-overview-list { padding: 6px 14px 10px; display: flex; flex-direction: column; gap: 4px; }
+.guide-overview-list.collapsed { display: none; }
+.guide-overview-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 6px; border-radius: 6px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.guide-overview-row:hover { background: rgba(255,255,255,.04); }
+.overview-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.overview-dot.done { background: var(--green); }
+.overview-dot.active { background: var(--accent); }
+.overview-dot.upcoming { background: var(--surface2); border: 1px solid var(--text-muted); }
+.overview-title { font-size: .82rem; color: var(--text); flex: 1; }
+.overview-meta { font-size: .7rem; color: var(--text-muted); flex-shrink: 0; }
+
+/* Ask AI button */
+.btn-ask-ai { margin-top: 4px; font-size: .8rem; }
+
+/* Clear chat row */
+#chat-clear-row {
+  display: flex; justify-content: flex-end;
+  padding: 4px 12px 0;
+}
+#chat-clear-btn { font-size: .75rem; opacity: 0.7; }

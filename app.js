@@ -36,6 +36,7 @@ if (typeof pdfjsLib !== 'undefined') {
 let state = load();
 let currentView = 'projects';
 let chatHistory = [];
+let activeSectionId = null;
 let isChatLoading = false;
 let isAnalyzing = false;
 
@@ -182,14 +183,14 @@ async function extractPdfText(dataUrl) {
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-    const maxPages = Math.min(pdf.numPages, 10);
+    const maxPages = Math.min(pdf.numPages, 20);
     let text = '';
     for (let i = 1; i <= maxPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       text += content.items.map(it => it.str).join(' ') + '\n\n';
     }
-    return text.trim().slice(0, 8000) || null;
+    return text.trim().slice(0, 24000) || null;
   } catch { return null; }
 }
 
@@ -405,8 +406,9 @@ Rules:
 - For every row or round with a stitch pattern, add a "highlight" with the exact notation (e.g. "Row 1: k2, p2 to end").
 - Keep exact original text in "original". Write a friendly version in "plain".
 - Include every abbreviation used with a clear beginner explanation.
+- In "warnings", list 1–2 short sentences about common beginner mistakes or tricky moments specific to THIS section. Keep each warning under 15 words. Use an empty array if nothing is especially tricky.
 
-Return ONLY valid JSON for this one section (same shape as before):
+Return ONLY valid JSON for this one section:
 {
   "instructions": [
     {
@@ -416,7 +418,8 @@ Return ONLY valid JSON for this one section (same shape as before):
       "highlight": "Row 1: k2, p2 repeat to end",
       "abbreviations": [{"abbr": "k2", "meaning": "Knit 2 stitches — insert needle, wrap yarn, pull through"}]
     }
-  ]
+  ],
+  "warnings": ["Don't pull too tight — you need room to insert the needle on the next row"]
 }
 
 Omit "highlight" only if the instruction has no specific stitch pattern notation.
@@ -427,30 +430,35 @@ ${text.slice(0, 24000)}`,
     4000
   );
   const result = parseAIJson(raw);
+  section.warnings = result?.warnings || [];
   return result?.instructions || [];
 }
 
-// Orchestrate plan + per-section fill. Calls onSectionReady(updatedProject) after each section.
-async function runPhase2(text, meta, answers, projectId, onSectionReady) {
+// Orchestrate plan + per-section fill. Reports progress via onProgress({done, total, currentTitle}).
+// Does NOT reveal the guide incrementally — the caller waits for the full guide before showing it.
+async function runPhase2(text, meta, answers, projectId, onProgress) {
+  if (onProgress) onProgress({ done: 0, total: 0, currentTitle: '' });
   const plan = await runPhase2Plan(text, meta, answers);
   if (!plan) return null;
 
-  // Save plan immediately so sections are visible right away
   const p = getProject(projectId);
   if (!p) return null;
   p.guide = plan;
   p.patternText = text;
   save(state);
-  if (onSectionReady) onSectionReady();
 
-  // Fill each section one by one
+  const total = plan.sections.length;
+  if (onProgress) onProgress({ done: 0, total, currentTitle: plan.sections[0]?.title || '' });
+
+  // Fill every section before revealing anything
   for (let i = 0; i < plan.sections.length; i++) {
     const s = plan.sections[i];
+    if (onProgress) onProgress({ done: i, total, currentTitle: s.title });
     const instructions = await runPhase2Section(text, s);
     s.instructions = instructions;
     s._loading = false;
     save(state);
-    if (onSectionReady) onSectionReady();
+    if (onProgress) onProgress({ done: i + 1, total, currentTitle: s.title });
   }
 
   return plan;
@@ -569,28 +577,37 @@ function showWizardStep(step, data) {
     const genBtn = document.createElement('button');
     genBtn.className = 'btn primary wizard-gen-btn'; genBtn.textContent = '✨ Build My Guide';
     genBtn.addEventListener('click', async () => {
-      showWizardStep('generating');
       const pid = wizardProjectId;
       const patText = wizardPatternText;
       const metaSnap = wizardMeta;
       const answersSnap = { ...answers };
-      closeWizard();
-      render(); // show project view while sections load in background
-      const guide = await runPhase2(patText, metaSnap, answersSnap, pid, () => {
-        const proj = getProject(pid);
-        if (proj && state.activeId === pid) renderProject();
-      });
+      showWizardStep('generating');
+      // Build the ENTIRE guide behind the loading animation; only reveal when complete.
+      const guide = await runPhase2(patText, metaSnap, answersSnap, pid, updateGeneratingProgress);
       if (!guide) {
         const proj = getProject(pid);
-        if (proj) { proj.guide = null; save(state); renderProject(); }
-        alert('Could not generate the guide. Check your OpenRouter key in the AI Chat tab and try again.');
+        if (proj) { proj.guide = null; save(state); }
+        showWizardStep('error', 'Could not generate the guide. Check your OpenRouter key in the AI Chat tab and try again.');
+        return;
       }
+      // Full pattern read, every section built — now reveal the finished guide.
+      state.activeId = pid;
+      save(state);
+      closeWizard();
+      render();
     });
     body.appendChild(genBtn);
 
   } else if (step === 'generating') {
     titleEl.textContent = 'Building Your Guide…'; closeBtn.classList.add('hidden'); setWizardBar(80);
-    body.innerHTML = wizardLoadingHTML('Creating your personalised step-by-step guide — this may take up to a minute…');
+    body.innerHTML = `
+      <div class="wizard-loading wizard-generating">
+        <div class="gen-yarn"><div class="gen-yarn-ball">🧶</div></div>
+        <p id="gen-status" class="gen-status">Reading your full pattern…</p>
+        <div class="gen-progress-track"><div id="gen-progress-fill" class="gen-progress-fill"></div></div>
+        <p id="gen-substatus" class="gen-substatus">Mapping every section from cast-on to bind-off</p>
+        <p class="gen-hint">Hang tight — your guide will appear only once the whole pattern is ready.</p>
+      </div>`;
 
   } else if (step === 'error') {
     titleEl.textContent = 'Something went wrong'; closeBtn.classList.remove('hidden'); setWizardBar(0);
@@ -613,7 +630,79 @@ function wizardLoadingHTML(msg) {
   return `<div class="wizard-loading"><div class="wizard-spinner"></div><p>${msg}</p></div>`;
 }
 
+// Live progress for the full-guide build. Called repeatedly by runPhase2.
+function updateGeneratingProgress({ done, total, currentTitle }) {
+  const status = document.getElementById('gen-status');
+  const fill = document.getElementById('gen-progress-fill');
+  const sub = document.getElementById('gen-substatus');
+  if (!status) return;
+
+  if (!total) {
+    status.textContent = 'Reading your full pattern…';
+    if (fill) fill.style.width = '8%';
+    if (sub) sub.textContent = 'Mapping every section from cast-on to bind-off';
+    setWizardBar(80);
+    return;
+  }
+
+  const pct = Math.round((done / total) * 100);
+  if (done < total) {
+    status.textContent = `Building your guide — section ${done + 1} of ${total}`;
+    if (sub) sub.textContent = currentTitle ? `Now writing: ${currentTitle}` : 'Writing step-by-step instructions…';
+  } else {
+    status.textContent = `All ${total} sections ready ✓`;
+    if (sub) sub.textContent = 'Putting your guide together…';
+  }
+  if (fill) fill.style.width = Math.max(8, pct) + '%';
+  setWizardBar(80 + Math.round(20 * done / total));
+}
+
 // ── Guide rendering ───────────────────────────────────────────────────────────
+
+function renderGuideOverview(guide) {
+  const isOpen = localStorage.getItem('ka-overview-open') !== 'false';
+  const total = guide.sections.length;
+  const done = guide.sections.filter(s => s.isComplete).length;
+  const firstIncompleteIdx = guide.sections.findIndex(s => !s.isComplete);
+
+  const wrap = document.createElement('div'); wrap.className = 'guide-overview';
+
+  const toggle = document.createElement('button'); toggle.className = 'guide-overview-toggle';
+  toggle.textContent = (isOpen ? '▲' : '▼') + ` All sections  ${done}/${total} done`;
+
+  const list = document.createElement('div'); list.className = 'guide-overview-list';
+  if (!isOpen) list.classList.add('collapsed');
+
+  guide.sections.forEach((section, i) => {
+    const row = document.createElement('div'); row.className = 'guide-overview-row';
+    const dot = document.createElement('span');
+    dot.className = 'overview-dot ' + (section.isComplete ? 'done' : i === firstIncompleteIdx ? 'active' : 'upcoming');
+    const title = document.createElement('span'); title.className = 'overview-title'; title.textContent = section.title;
+    const meta = document.createElement('span'); meta.className = 'overview-meta';
+    if (section.progress?.target && section.progress.type !== 'none') {
+      meta.textContent = `${section.currentProgress || 0}/${section.progress.target} ${section.progress.label || 'rows'}`;
+    }
+    const badge = document.createElement('span');
+    badge.className = `guide-badge type-${(section.type || 'setup').replace(/[^a-z-]/g, '')}`;
+    badge.textContent = section.badge || section.type || 'Step';
+    badge.style.fontSize = '.55rem';
+    row.append(dot, title, meta, badge);
+    row.addEventListener('click', () => {
+      const card = document.getElementById(`gs-${section.id}`);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    list.appendChild(row);
+  });
+
+  toggle.addEventListener('click', () => {
+    const nowOpen = list.classList.toggle('collapsed');
+    toggle.textContent = (nowOpen ? '▼' : '▲') + ` All sections  ${done}/${total} done`;
+    localStorage.setItem('ka-overview-open', nowOpen ? 'false' : 'true');
+  });
+
+  wrap.append(toggle, list);
+  return wrap;
+}
 
 function renderGuideInto(p, container) {
   const guide = p.guide;
@@ -643,6 +732,17 @@ function renderGuideInto(p, container) {
   // Section cards — sequential: active = first incomplete, locked = anything after it
   const anyLoading = guide.sections.some(s => s._loading);
   const firstIncompleteIdx = guide.sections.findIndex(s => !s.isComplete);
+
+  // Auto-track active section (only update if current tracked section is done or gone)
+  const firstIncompleteSection = firstIncompleteIdx !== -1 ? guide.sections[firstIncompleteIdx] : null;
+  const currentSectionStillActive = activeSectionId && guide.sections.some(s => s.id === activeSectionId && !s.isComplete);
+  if (firstIncompleteSection && !currentSectionStillActive) {
+    activeSectionId = firstIncompleteSection.id;
+  }
+
+  // Overview panel — garment map at a glance
+  if (!anyLoading) container.appendChild(renderGuideOverview(guide));
+
   guide.sections.forEach((section, i) => {
     const isActive = !anyLoading && i === firstIncompleteIdx;
     const isLocked = !anyLoading && firstIncompleteIdx !== -1 && i > firstIncompleteIdx;
@@ -703,6 +803,13 @@ function buildGuideSection(projectId, section, isActive, isLocked) {
   body.className = `guide-card-body${startCollapsed ? ' collapsed' : ''}`;
 
   if (section.description) body.appendChild(el('p', 'guide-section-desc', section.description));
+
+  // ⚠️ Watch-out warnings (only on newly-imported sections that have them)
+  if (section.warnings?.length > 0) {
+    section.warnings.forEach(w => {
+      body.appendChild(el('div', 'section-warning', `⚠️ ${w}`));
+    });
+  }
 
   if (section._loading) {
     const shimmer = el('div', 'guide-loading-shimmer', 'Loading instructions…');
@@ -772,8 +879,21 @@ function buildGuideSection(projectId, section, isActive, isLocked) {
     body.appendChild(skipBtn);
   }
 
-  // Mark done button — prominent, at bottom of active section
+  // Ask AI button + Mark done — only on active section
   if (isActive && !section.isComplete) {
+    const askBtn = document.createElement('button');
+    askBtn.className = 'btn secondary small btn-ask-ai';
+    askBtn.textContent = '💬 Ask AI about this step';
+    askBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      activeSectionId = section.id;
+      const input = document.getElementById('chat-input');
+      if (input) input.value = `I'm working on "${section.title}". `;
+      switchView('chat');
+      if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+    });
+    body.appendChild(askBtn);
+
     const doneBtn = document.createElement('button');
     doneBtn.className = 'btn primary full-width guide-mark-done-btn';
     doneBtn.textContent = '✓ Mark this section done';
@@ -794,6 +914,7 @@ function buildGuideSection(projectId, section, isActive, isLocked) {
 }
 
 function updateSectionProgress(projectId, sectionId, delta) {
+  activeSectionId = sectionId;
   const p = getProject(projectId);
   const s = p?.guide?.sections.find(s => s.id === sectionId);
   if (!s || !s.progress?.target) return;
@@ -978,6 +1099,22 @@ Be concise and practical. When using jargon, explain it clearly.`;
   if (p?.patternText) {
     prompt += `\n\nThe user has uploaded a knitting pattern. Here is the pattern text (may be truncated):\n\n${p.patternText.slice(0, 3000)}`;
   }
+  // Active section context — gives the AI precise "where am I now" information
+  const section = activeSectionId && p?.guide?.sections.find(s => s.id === activeSectionId);
+  if (section) {
+    prompt += `\n\nThe user is currently working on the "${section.title}" section (${section.type || 'step'}).`;
+    if (section.description) prompt += ` ${section.description}`;
+    if (section.progress?.target && section.progress.type !== 'none') {
+      prompt += ` They are on ${section.currentProgress || 0} of ${section.progress.target} ${section.progress.label || 'rows'}.`;
+    }
+    if (section.warnings?.length > 0) {
+      prompt += `\n\nKnown tricky points for this section:\n${section.warnings.map(w => `- ${w}`).join('\n')}`;
+    }
+    if (section.instructions?.length > 0) {
+      const instrText = section.instructions.slice(0, 8).map((instr, i) => `${i + 1}. ${instr.plain}`).join('\n');
+      prompt += `\n\nInstructions for this section:\n${instrText}`;
+    }
+  }
   return prompt;
 }
 
@@ -993,6 +1130,8 @@ function showChatMain() {
 
 function initChat() {
   const key = localStorage.getItem('orApiKey');
+  const p = activeProject();
+  chatHistory = (p?.chatHistory || []).slice();
   if (key) showChatMain(); else showChatSetup();
   renderChat();
 }
@@ -1001,16 +1140,38 @@ function renderChat() {
   const thread = document.getElementById('chat-messages');
   if (!thread) return;
   thread.innerHTML = '';
+
+  // Show/hide clear button based on whether there's history
+  const clearRow = document.getElementById('chat-clear-row');
+  if (clearRow) clearRow.classList.toggle('hidden', chatHistory.length === 0);
+
+  const proj = activeProject();
+  const activeSection = activeSectionId && proj?.guide?.sections.find(s => s.id === activeSectionId);
+
   if (chatHistory.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'chat-empty';
-    empty.textContent = 'Ask me anything about your pattern ✨';
+    empty.textContent = activeSection
+      ? `Working on: "${activeSection.title}" — ask me anything ✨`
+      : 'Ask me anything about your pattern ✨';
     thread.appendChild(empty);
-    const proj = activeProject();
-    if (proj?.patternText) {
+
+    const chipQuestions = activeSection ? [
+      'What could go wrong here?',
+      `Explain the ${activeSection.type || 'technique'} technique`,
+      'I think I made a mistake',
+      'How many stitches should I have?'
+    ] : (proj?.patternText ? [
+      'Summarize this pattern',
+      'What abbreviations are used?',
+      'What materials do I need?',
+      'What skill level is this?'
+    ] : null);
+
+    if (chipQuestions) {
       const chips = document.createElement('div');
       chips.className = 'chat-chips';
-      ['Summarize this pattern', 'What abbreviations are used?', 'What materials do I need?', 'What skill level is this?'].forEach(q => {
+      chipQuestions.forEach(q => {
         const chip = document.createElement('button');
         chip.className = 'chat-chip';
         chip.textContent = q;
@@ -1080,6 +1241,8 @@ async function sendChatMessage() {
     chatHistory.push({ role: 'assistant', content: `⚠️ ${e.message}. Check your API key in settings (⚙).` });
   } finally {
     isChatLoading = false;
+    const p = activeProject();
+    if (p) { p.chatHistory = chatHistory.slice(-50); save(state); }
     renderChat();
   }
 }
@@ -1445,6 +1608,15 @@ document.querySelectorAll('#bottom-nav button').forEach(btn => {
 document.getElementById('glossary-search').addEventListener('input', e => renderGlossary(e.target.value));
 
 document.getElementById('chat-send').addEventListener('click', sendChatMessage);
+document.getElementById('chat-clear-btn').addEventListener('click', () => {
+  if (!chatHistory.length) return;
+  if (confirm('Clear this project\'s chat history?')) {
+    chatHistory = [];
+    const p = activeProject();
+    if (p) { p.chatHistory = []; save(state); }
+    renderChat();
+  }
+});
 document.getElementById('chat-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
 });
@@ -1504,6 +1676,8 @@ document.getElementById('chat-settings-btn').addEventListener('click', () => {
     if (confirm('Remove your OpenRouter API key?')) {
       localStorage.removeItem('orApiKey');
       chatHistory = [];
+      const p = activeProject();
+      if (p) { p.chatHistory = []; save(state); }
       showChatSetup();
     }
   }
