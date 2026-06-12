@@ -7,6 +7,7 @@ function load() {
 }
 
 function save(state) {
+  state.updatedAt = Date.now();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) {
@@ -26,6 +27,100 @@ function save(state) {
       }
     }
   }
+  scheduleServerPush();
+}
+
+// ── Server-backed persistence ─────────────────────────────────────────────────
+// The PC server is the source of truth so data survives iOS's separate storage
+// for Safari vs. home-screen apps, and survives storage eviction. localStorage
+// stays as an offline cache. Reconciliation never lets an empty/thin copy
+// overwrite a richer one.
+const SERVER_STATE_URL = '/api/state';
+let serverSyncReady = false;   // true once the initial reconcile has run
+let serverPushTimer = null;
+
+// The raw PDF blob is large and only needed for re-import — keep it local only.
+function stateForServer() {
+  return { ...state, projects: (state.projects || []).map(p => ({ ...p, pdfData: null })) };
+}
+
+async function pushStateToServer() {
+  try {
+    await fetch(SERVER_STATE_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(stateForServer()),
+    });
+  } catch { /* offline — localStorage still holds the data; retry on next save */ }
+}
+
+function scheduleServerPush() {
+  if (!serverSyncReady) return;   // don't push before the first reconcile decides who wins
+  clearTimeout(serverPushTimer);
+  serverPushTimer = setTimeout(pushStateToServer, 1200);
+}
+
+// Crude richness score so an empty/thin copy never clobbers real progress.
+function contentScore(s) {
+  let score = 0;
+  (s?.projects || []).forEach(p => {
+    score += 1;
+    score += (p.guide?.sections?.length || 0);
+    score += (p.chatHistory?.length || 0);
+    (p.steps || []).forEach(st => (st.counters || []).forEach(c => { score += (c.value || 0); }));
+    (p.guide?.sections || []).forEach(sec => { score += (sec.currentProgress || 0) + (sec.isComplete ? 5 : 0); });
+  });
+  return score;
+}
+
+function adoptServerState(remote) {
+  // Server copy has no pdfData — re-attach any local PDF blobs by project id.
+  const localById = {};
+  (state.projects || []).forEach(p => { localById[p.id] = p; });
+  remote.projects = (remote.projects || []).map(p => ({
+    ...p, pdfData: p.pdfData || localById[p.id]?.pdfData || null,
+  }));
+  state = remote;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* ignore */ }
+  chatHistory = (activeProject()?.chatHistory || []).slice();
+  render();
+}
+
+async function initServerSync() {
+  let remote = null;
+  try {
+    const res = await fetch(SERVER_STATE_URL, { cache: 'no-store' });
+    if (res.ok) remote = await res.json();
+  } catch { remote = null; }
+
+  const localHas  = (state.projects?.length || 0) > 0;
+  const remoteHas = remote && Array.isArray(remote.projects) && remote.projects.length > 0;
+
+  if (remoteHas && !localHas) {
+    adoptServerState(remote);
+  } else if (!remoteHas && localHas) {
+    // First upload of existing local data — happens when you open the app where
+    // your data already lives (e.g. the Safari tab) for the first time.
+    serverSyncReady = true;
+    await pushStateToServer();
+    return;
+  } else if (remoteHas && localHas) {
+    const localStamp  = state.updatedAt || 0;
+    const remoteStamp = remote.updatedAt || 0;
+    if (localStamp === 0 || remoteStamp === 0) {
+      // One side predates timestamps — fall back to richness to avoid data loss.
+      if (contentScore(remote) > contentScore(state)) adoptServerState(remote);
+      else { serverSyncReady = true; await pushStateToServer(); return; }
+    } else if (remoteStamp > localStamp) {
+      adoptServerState(remote);
+    } else if (localStamp > remoteStamp) {
+      serverSyncReady = true;
+      await pushStateToServer();
+      return;
+    }
+    // equal timestamps → already in sync
+  }
+  serverSyncReady = true;
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -1686,3 +1781,5 @@ document.getElementById('chat-settings-btn').addEventListener('click', () => {
 // ── Init ──────────────────────────────────────────────────────────────────────
 render();
 switchView('projects');
+// Reconcile with the server source of truth, then keep it in sync on every save.
+initServerSync();

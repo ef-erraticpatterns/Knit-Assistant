@@ -15,6 +15,8 @@ from pydantic import BaseModel
 BASE = Path(__file__).parent
 DB_FILE = BASE / "knit_assistant.db"
 CLAUDE_INBOX = BASE / "claude_inbox.json"
+STATE_FILE = BASE / "knit_state.json"
+STATE_BACKUP_DIR = BASE / "state_backups"
 
 app = FastAPI()
 
@@ -77,6 +79,48 @@ def serve_icon(filename: str):
     if not p.exists():
         raise HTTPException(404)
     return FileResponse(p)
+
+
+# ── App state persistence ─────────────────────────────────────────────────────
+# Single source of truth for the user's projects/progress/chat. Lives in a JSON
+# file on the PC so every device + context (Safari, home-screen app) shares it.
+
+@app.get("/api/state")
+def get_state():
+    if STATE_FILE.exists():
+        try:
+            return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+@app.put("/api/state")
+async def put_state(request: Request):
+    body = await request.json()
+    try:
+        STATE_BACKUP_DIR.mkdir(exist_ok=True)
+        # Permanent backup of the very first non-empty state we ever receive —
+        # never overwritten, so the original data can always be recovered.
+        first = STATE_BACKUP_DIR / "first-capture.json"
+        if not first.exists() and body.get("projects"):
+            first.write_text(json.dumps(body, ensure_ascii=False), encoding="utf-8")
+        # Rotating backup of the previous state before overwriting it.
+        if STATE_FILE.exists():
+            ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+            (STATE_BACKUP_DIR / f"state-{ts}.json").write_text(
+                STATE_FILE.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            backups = sorted(STATE_BACKUP_DIR.glob("state-*.json"))
+            for old in backups[:-20]:
+                old.unlink(missing_ok=True)
+    except Exception:
+        pass
+    # Atomic write so a crash mid-write can't corrupt the state file.
+    tmp = STATE_FILE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(body, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(STATE_FILE)
+    return {"ok": True}
 
 
 # ── Claude tasks API ──────────────────────────────────────────────────────────

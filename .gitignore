@@ -2,3 +2,6 @@ __pycache__/
 *.db
 claude_inbox.json
 .claude/
+knit_state.json
+knit_state.json.tmp
+state_backups/
