@@ -1004,6 +1004,41 @@ body.fb-picking * { cursor: crosshair !important; }
   line-height: 1.5;
 }
 
+/* Per-section notes & AI adjustments */
+.section-notes { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.section-note {
+  border-radius: 8px; padding: 9px 12px;
+  font-size: .84rem; line-height: 1.5;
+}
+.section-note-label { display: block; font-size: .72rem; font-weight: 700; opacity: .85; margin-bottom: 3px; }
+.section-note-text { margin: 0; color: var(--text); }
+.section-note.user { background: var(--surface2); border-left: 3px solid var(--text-muted); }
+.section-note.user .section-note-label { color: var(--text-muted); }
+.section-note.ai.verdict-safe    { background: rgba(134,239,172,0.10); border-left: 3px solid var(--green); }
+.section-note.ai.verdict-safe .section-note-label { color: var(--green); }
+.section-note.ai.verdict-caution { background: rgba(251,191,36,0.10); border-left: 3px solid #fbbf24; }
+.section-note.ai.verdict-caution .section-note-label { color: #fbbf24; }
+.section-note.ai.verdict-avoid   { background: rgba(248,113,113,0.10); border-left: 3px solid var(--danger); }
+.section-note.ai.verdict-avoid .section-note-label { color: var(--danger); }
+.section-note.thinking { background: var(--surface2); color: var(--text-muted); font-style: italic; animation: shimmer-pulse 1.2s ease-in-out infinite; }
+.section-note-adjusted { margin-top: 7px; display: flex; flex-direction: column; gap: 3px; }
+.section-note-adjusted-label { font-size: .7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+.section-note-adjusted code {
+  display: block; background: var(--bg); border-radius: 6px;
+  padding: 7px 9px; font-size: .82rem; color: var(--accent);
+  white-space: pre-wrap; word-break: break-word;
+}
+.section-note-add { align-self: flex-start; }
+.section-note-composer { display: flex; flex-direction: column; gap: 8px; }
+.section-note-input {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  background: var(--surface2); border: 1px solid var(--accent2);
+  border-radius: 8px; padding: 9px 11px;
+  font-size: .86rem; color: var(--text); font-family: inherit;
+}
+.section-note-input::placeholder { color: var(--text-muted); }
+.section-note-composer-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+
 /* Garment overview panel */
 .guide-overview {
   background: var(--surface);

@@ -134,6 +134,7 @@ let chatHistory = [];
 let activeSectionId = null;
 let isChatLoading = false;
 let isAnalyzing = false;
+const openNoteComposers = new Set();   // section ids whose note composer is expanded
 
 function getProject(id) { return state.projects.find(p => p.id === id); }
 function activeProject() { return getProject(state.activeId); }
@@ -1030,6 +1031,10 @@ function buildGuideSection(projectId, section, isActive, isLocked) {
     body.appendChild(ps);
   }
 
+  // Notes & AI adjustments — saved per section; composer only on the active section
+  const notesEl = buildSectionNotes(projectId, section, isActive && !section.isComplete);
+  if (notesEl) body.appendChild(notesEl);
+
   // Skip button on locked sections — lets user fast-forward past already-done work
   if (isLocked) {
     const skipBtn = document.createElement('button');
@@ -1079,6 +1084,162 @@ function buildGuideSection(projectId, section, isActive, isLocked) {
   head.addEventListener('click', () => { if (!isLocked) body.classList.toggle('collapsed'); });
   card.appendChild(body);
   return card;
+}
+
+const VERDICT_LABEL = { safe: '✅ Safe to keep', caution: '⚠️ Your call', avoid: '⛔ Better to fix' };
+
+// Render a section's saved notes/AI-advice thread, plus (on the active section) a
+// composer to add a note or ask the AI about a deviation.
+function buildSectionNotes(projectId, section, allowAdd) {
+  const hasNotes = section.notes?.length > 0;
+  if (!hasNotes && !allowAdd) return null;
+
+  const wrap = document.createElement('div'); wrap.className = 'section-notes';
+
+  if (hasNotes) {
+    section.notes.forEach(n => {
+      if (n.role === 'user') {
+        const u = el('div', 'section-note user');
+        u.appendChild(el('span', 'section-note-label', '✏️ Your note'));
+        u.appendChild(el('p', 'section-note-text', n.text));
+        wrap.appendChild(u);
+      } else {
+        const verdict = ['safe', 'caution', 'avoid'].includes(n.verdict) ? n.verdict : 'caution';
+        const a = el('div', `section-note ai verdict-${verdict}`);
+        a.appendChild(el('span', 'section-note-label', VERDICT_LABEL[verdict]));
+        a.appendChild(el('p', 'section-note-text', n.text));
+        if (n.adjusted) {
+          const adj = el('div', 'section-note-adjusted');
+          adj.appendChild(el('span', 'section-note-adjusted-label', 'Adjusted step'));
+          adj.appendChild(el('code', '', n.adjusted));
+          a.appendChild(adj);
+        }
+        wrap.appendChild(a);
+      }
+    });
+  }
+
+  if (section._adjustLoading) {
+    wrap.appendChild(el('div', 'section-note ai thinking', '🤖 Thinking about your change…'));
+  }
+
+  if (allowAdd) {
+    if (!openNoteComposers.has(section.id)) {
+      const addBtn = el('button', 'btn secondary small section-note-add', '✏️ Add a note / ask about a change');
+      addBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        openNoteComposers.add(section.id);
+        renderProject();
+      });
+      wrap.appendChild(addBtn);
+    } else {
+      const composer = el('div', 'section-note-composer');
+      const ta = document.createElement('textarea');
+      ta.className = 'section-note-input'; ta.rows = 2;
+      ta.placeholder = 'e.g. I have 73 stitches but the pattern says 71 — is it okay to keep them?';
+      composer.appendChild(ta);
+      const row = el('div', 'section-note-composer-btns');
+      const askBtn = el('button', 'btn primary small', '🤖 Ask AI');
+      askBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const txt = ta.value.trim(); if (!txt) return;
+        askSectionAdjustment(projectId, section.id, txt);
+      });
+      const saveBtn = el('button', 'btn secondary small', 'Save note');
+      saveBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const txt = ta.value.trim(); if (!txt) return;
+        saveSectionNote(projectId, section.id, txt);
+      });
+      const cancelBtn = el('button', 'btn secondary small', 'Cancel');
+      cancelBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        openNoteComposers.delete(section.id);
+        renderProject();
+      });
+      row.append(askBtn, saveBtn, cancelBtn);
+      composer.appendChild(row);
+      wrap.appendChild(composer);
+    }
+  }
+
+  return wrap;
+}
+
+function saveSectionNote(projectId, sectionId, text) {
+  const p = getProject(projectId);
+  const s = p?.guide?.sections.find(s => s.id === sectionId);
+  if (!s) return;
+  if (!s.notes) s.notes = [];
+  s.notes.push({ id: uid(), role: 'user', text, ts: Date.now() });
+  save(state);
+  renderProject();
+}
+
+// Ask the AI to judge a deviation for THIS section and advise whether to keep it.
+async function askSectionAdjustment(projectId, sectionId, userText) {
+  const p = getProject(projectId);
+  const s = p?.guide?.sections.find(s => s.id === sectionId);
+  if (!s) return;
+  if (!localStorage.getItem('orApiKey')) {
+    alert('Set up your OpenRouter API key in the AI Chat tab first.');
+    switchView('chat');
+    return;
+  }
+
+  if (!s.notes) s.notes = [];
+  s.notes.push({ id: uid(), role: 'user', text: userText, ts: Date.now() });
+  s._adjustLoading = true;
+  activeSectionId = s.id;
+  save(state);
+  renderProject();
+
+  const instrText = (s.instructions || []).slice(0, 12)
+    .map((it, i) => `${i + 1}. ${it.plain}${it.original ? `  [pattern: ${it.original}]` : ''}`)
+    .join('\n') || '(no instructions captured)';
+  const target = s.progress?.target
+    ? `${s.currentProgress || 0} of ${s.progress.target} ${s.progress.label || 'rows'}`
+    : 'n/a';
+
+  const raw = await callAI(
+    `You are advising a beginner knitter who has deviated from the pattern.
+
+Pattern: ${p.guide?.patternName || p.name || 'pattern'}
+Current section: "${s.title}" (${s.type || 'section'})
+What this section does: ${s.description || '(no description)'}
+Instructions for this section:
+${instrText}
+Progress: ${target}
+
+The knitter says:
+"${userText}"
+
+Judge how much this deviation matters for THIS section. Small stitch-count differences (1–2 sts) are often fine in plain body/stockinette areas, but matter a lot where shaping, symmetry or fit depend on exact counts (armholes, necklines, shoulders, raglan lines), or where a later step needs an exact number.
+
+Return ONLY valid JSON:
+{
+  "verdict": "safe" | "caution" | "avoid",
+  "advice": "2–4 short, encouraging sentences in plain English. If safe: say so and explain exactly how to adjust the remaining rows or counts to work with their actual number. If caution: explain the risk and how to decide. If avoid: gently explain why keeping it changes the shape/fit, and what to do instead.",
+  "adjusted": "optional corrected version of the current instruction using their numbers, or empty string"
+}`,
+    'You are an expert knitting advisor. You give accurate, practical, encouraging guidance to beginners and make smart judgments about when pattern deviations are safe to keep. Return ONLY valid JSON.',
+    1200
+  );
+
+  const result = parseAIJson(raw);
+  s._adjustLoading = false;
+  if (result && result.advice) {
+    const verdict = ['safe', 'caution', 'avoid'].includes(result.verdict) ? result.verdict : 'caution';
+    s.notes.push({ id: uid(), role: 'ai', verdict, text: result.advice, adjusted: result.adjusted || '', ts: Date.now() });
+  } else {
+    s.notes.push({
+      id: uid(), role: 'ai', verdict: 'caution',
+      text: "Sorry — I couldn't analyse that just now. Check your API key in the AI Chat tab and try again.",
+      ts: Date.now(),
+    });
+  }
+  save(state);
+  renderProject();
 }
 
 function updateSectionProgress(projectId, sectionId, delta) {
