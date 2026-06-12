@@ -490,16 +490,35 @@ ${text.slice(0, 24000)}`,
 }
 
 // Pass B: fill one section's instructions. Called once per section after the plan is shown.
-async function runPhase2Section(text, section) {
+// `context` gives the full ordered section list + this section's index so the AI can
+// respect boundaries and resolve "work same as front" style references correctly.
+async function runPhase2Section(text, section, context) {
+  const sections = context?.sections || [section];
+  const idx = context?.index ?? 0;
+  const orderedList = sections.map((s, i) => `${i + 1}. ${s.title}${i === idx ? '   ← THIS section' : ''}`).join('\n');
+  const prevTitle = idx > 0 ? sections[idx - 1].title : null;
+  const nextTitle = idx < sections.length - 1 ? sections[idx + 1].title : null;
+
   const raw = await callAI(
-    `Fill in the step-by-step instructions for this section of a knitting pattern.
+    `You are extracting the step-by-step instructions for ONE section of a larger knitting pattern.
 
-Section: "${section.title}" (${section.type})
+Full section order (for context only):
+${orderedList}
 
-Rules:
+You are filling section ${idx + 1}: "${section.title}" (${section.type}).
+Previous section (already completed by the knitter): ${prevTitle ? `"${prevTitle}"` : 'none — this is the first section'}
+Next section (do NOT include its rows): ${nextTitle ? `"${nextTitle}"` : 'none — this is the last section'}
+
+ACCURACY RULES — these matter most:
+- Output ONLY the rows/rounds the knitter works DURING this section. Stop where the next section begins.
+- The knitter has ALREADY finished every earlier section. Never repeat one-time setup steps that belong to an earlier section — e.g. casting on, returning held stitches to the needle, rejoining/reattaching yarn, or placing markers for the first time. If you see such a setup line, it belongs to the section where it first happens, not here.
+- If THIS section is written by reference (e.g. "work same as front", "work as for back", "rep as for sleeve"), DO NOT output the reference sentence. Instead reproduce the ACTUAL rows from the referenced section that match THIS section's specific purpose. Example: a "Back Armhole Increases" section whose pattern text only says "work same as front" must contain the front's armhole-INCREASE rows — not the front's set-up or plain rows, and not the "rejoin yarn" line.
+- Every "original" must be a row/round the knitter actually works now in THIS section. If a row was already covered by a previous section, leave it out.
+
+WRITING RULES:
 - Write for a BEGINNER. Plain English for every instruction.
 - For every row or round with a stitch pattern, add a "highlight" with the exact notation (e.g. "Row 1: k2, p2 to end").
-- Keep exact original text in "original". Write a friendly version in "plain".
+- Keep the exact pattern wording in "original". Write a friendly version in "plain".
 - Include every abbreviation used with a clear beginner explanation.
 - In "warnings", list 1–2 short sentences about common beginner mistakes or tricky moments specific to THIS section. Keep each warning under 15 words. Use an empty array if nothing is especially tricky.
 
@@ -519,9 +538,9 @@ Return ONLY valid JSON for this one section:
 
 Omit "highlight" only if the instruction has no specific stitch pattern notation.
 
-Full pattern text (find the "${section.title}" section and extract its instructions):
+Full pattern text:
 ${text.slice(0, 24000)}`,
-    'You are an expert knitting guide creator writing for beginners. Return ONLY valid JSON.',
+    'You are an expert knitting guide creator writing for beginners. You follow section boundaries exactly and never duplicate setup steps from earlier sections. Return ONLY valid JSON.',
     4000
   );
   const result = parseAIJson(raw);
@@ -549,7 +568,7 @@ async function runPhase2(text, meta, answers, projectId, onProgress) {
   for (let i = 0; i < plan.sections.length; i++) {
     const s = plan.sections[i];
     if (onProgress) onProgress({ done: i, total, currentTitle: s.title });
-    const instructions = await runPhase2Section(text, s);
+    const instructions = await runPhase2Section(text, s, { sections: plan.sections, index: i });
     s.instructions = instructions;
     s._loading = false;
     save(state);
@@ -557,6 +576,50 @@ async function runPhase2(text, meta, answers, projectId, onProgress) {
   }
 
   return plan;
+}
+
+// Refresh every section's instruction wording WITHOUT changing the section list,
+// so the knitter's progress (currentProgress / isComplete) is preserved. Re-reads
+// the stored PDF for the full, untruncated pattern text when available.
+async function refixGuideInstructions(projectId) {
+  const p = getProject(projectId);
+  if (!p?.guide?.sections?.length) return;
+  if (!localStorage.getItem('orApiKey')) {
+    alert('Set up your OpenRouter API key in the AI Chat tab first.');
+    switchView('chat');
+    return;
+  }
+
+  document.getElementById('wizard-overlay').classList.remove('hidden');
+  showWizardStep('generating');
+
+  // Prefer re-extracting the full text from the stored PDF (most accurate); fall back to saved text.
+  let text = p.patternText;
+  if (p.pdfData) {
+    const fresh = await extractPdfText(p.pdfData);
+    if (fresh) { text = fresh; p.patternText = fresh; }
+  }
+  if (!text) {
+    closeWizard();
+    alert('No pattern text is stored for this guide. Please use "Re-import" instead.');
+    return;
+  }
+
+  const sections = p.guide.sections;
+  const total = sections.length;
+  for (let i = 0; i < total; i++) {
+    const s = sections[i];
+    updateGeneratingProgress({ done: i, total, currentTitle: s.title });
+    const instructions = await runPhase2Section(text, s, { sections, index: i });
+    if (instructions && instructions.length) s.instructions = instructions; // keep old wording if the AI returns nothing
+    s._loading = false;
+    save(state);   // progress fields untouched
+    updateGeneratingProgress({ done: i + 1, total, currentTitle: s.title });
+  }
+
+  closeWizard();
+  renderProject();
+  alert('Instruction wording refreshed for all sections — your progress was kept.');
 }
 
 // ── Wizard ────────────────────────────────────────────────────────────────────
@@ -811,12 +874,22 @@ function renderGuideInto(p, container) {
   const nameEl = document.createElement('strong'); nameEl.textContent = guide.patternName || 'Pattern';
   const sizeEl = document.createElement('span'); sizeEl.textContent = guide.sizeChosen || '';
   titleWrap.append(nameEl, sizeEl);
+  const btnWrap = document.createElement('div'); btnWrap.className = 'guide-header-btns';
+  const refixBtn = document.createElement('button');
+  refixBtn.className = 'btn small secondary'; refixBtn.textContent = '🔧 Re-fix text';
+  refixBtn.title = 'Refresh the step wording for accuracy — keeps your row counts and progress';
+  refixBtn.addEventListener('click', () => {
+    if (confirm('Refresh the instruction wording for every section?\n\nYour progress (row counts, completed sections) will be kept.')) {
+      refixGuideInstructions(p.id);
+    }
+  });
   const reimportBtn = document.createElement('button');
   reimportBtn.className = 'btn small secondary'; reimportBtn.textContent = 'Re-import';
   reimportBtn.addEventListener('click', () => {
-    if (confirm('Replace this guide with a new pattern import?')) { p.guide = null; save(state); renderProject(); }
+    if (confirm('Replace this guide with a new pattern import? This starts over and clears your progress.')) { p.guide = null; save(state); renderProject(); }
   });
-  hdr.append(titleWrap, reimportBtn);
+  btnWrap.append(refixBtn, reimportBtn);
+  hdr.append(titleWrap, btnWrap);
   container.appendChild(hdr);
 
   // Overall progress

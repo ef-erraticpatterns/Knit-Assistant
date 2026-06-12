@@ -876,6 +876,7 @@ body.fb-picking * { cursor: crosshair !important; }
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 10px;
 }
+.guide-header-btns { display: flex; gap: 6px; flex-shrink: 0; }
 .guide-title { display: flex; flex-direction: column; gap: 2px; }
 .guide-title strong { font-size: 1rem; color: var(--text); }
 .guide-title span { font-size: .78rem; color: var(--accent); }
