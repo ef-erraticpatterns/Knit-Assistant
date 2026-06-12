@@ -16,6 +16,7 @@
   <div id="app">
     <header>
       <h1>🧶 Knit Assistant</h1>
+      <button id="refresh-app-btn" class="icon-btn secondary" title="Update to the latest version">↻</button>
       <button id="add-project-btn" class="icon-btn" title="New project">＋</button>
       <button id="chat-settings-btn" class="icon-btn secondary hidden" title="API key settings">⚙</button>
     </header>
@@ -150,8 +151,15 @@
   <script src="widget.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {
-        navigator.serviceWorker.register('./sw.js');
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => reg.update())
+        .catch(() => navigator.serviceWorker.register('./sw.js'));
+      // When a new version takes control, reload once so the latest code shows.
+      let _swReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (_swReloaded) return;
+        _swReloaded = true;
+        location.reload();
       });
     }
   </script>

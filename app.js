@@ -1668,6 +1668,27 @@ function confirmStepModal() {
 }
 
 // ── Event wiring ──────────────────────────────────────────────────────────────
+// One-tap hard refresh: clears cached code + checks for a new service worker,
+// then reloads. Only clears cached files — your projects, counters and chats
+// (in local storage + on the server) are untouched.
+document.getElementById('refresh-app-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('refresh-app-btn');
+  btn.textContent = '…'; btn.disabled = true;
+  // Make sure the newest data is on the server before we reload.
+  try { await pushStateToServer(); } catch { /* ignore */ }
+  try {
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.update()));
+    }
+  } catch { /* ignore */ }
+  location.reload();
+});
+
 document.getElementById('add-project-btn').addEventListener('click', () => {
   if (!localStorage.getItem('orApiKey')) {
     alert('Set up your OpenRouter API key in the AI Chat tab first — it\'s needed to read your pattern.');
