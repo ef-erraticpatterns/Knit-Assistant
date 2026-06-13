@@ -950,25 +950,27 @@ body.fb-picking * { cursor: crosshair !important; }
 }
 @keyframes shimmer-pulse { 0%,100%{opacity:.4} 50%{opacity:.9} }
 .guide-instr-highlight {
-  display: block; margin: 4px 0 6px;
-  background: rgba(105,64,165,0.12); color: #6940a5;
-  border-left: 3px solid #6940a5;
-  padding: 4px 8px; border-radius: 0 5px 5px 0;
-  font-size: .82rem; font-family: monospace; line-height: 1.5;
+  display: block; margin: 2px 0 4px;
+  background: rgba(105,64,165,0.18); color: #7c4dbd;
+  border-left: 4px solid #7c4dbd;
+  padding: 7px 11px; border-radius: 0 6px 6px 0;
+  font-size: .9rem; font-family: monospace; line-height: 1.6;
+  font-weight: 600;
   white-space: pre-wrap; word-break: break-word;
+  box-shadow: 0 1px 4px rgba(105,64,165,0.12);
 }
 .guide-skip-btn { margin-top: 6px; font-size: .75rem; opacity: 0.8; }
 
 /* Instructions list */
-.guide-instructions { padding-left: 18px; display: flex; flex-direction: column; gap: 14px; margin: 0; }
-.guide-instr { display: flex; flex-direction: column; gap: 4px; }
+.guide-instructions { padding-left: 18px; display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.guide-instr { display: flex; flex-direction: column; gap: 3px; }
 .guide-instr-plain {
-  font-size: .88rem; color: var(--text); line-height: 1.5;
+  font-size: .84rem; color: var(--text-muted); line-height: 1.45;
 }
 .guide-instr-original {
-  font-size: .75rem; color: var(--text-muted); font-family: monospace;
-  background: var(--surface2); border-radius: 4px; padding: 3px 7px;
-  line-height: 1.4; word-break: break-word;
+  font-size: .73rem; color: var(--text-muted); font-family: monospace;
+  background: var(--surface2); border-radius: 4px; padding: 2px 6px;
+  line-height: 1.4; word-break: break-word; opacity: 0.75;
 }
 .guide-abbr-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 .guide-abbr-chip {
