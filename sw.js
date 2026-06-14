@@ -1,4 +1,4 @@
-const CACHE_NAME = 'artikel-trainer-v3';
+const CACHE_NAME = 'artikel-trainer-v4';
 const BASE = new URL('./', self.location).href;
 
 const ASSET_PATHS = [

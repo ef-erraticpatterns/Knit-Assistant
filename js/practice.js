@@ -22,6 +22,7 @@ const Practice = (() => {
     xpDisplay:      document.getElementById('practice-xp'),
     caseChip:       document.getElementById('q-case-chip'),
     noun:           document.getElementById('q-noun'),
+    translation:    document.getElementById('q-translation'),
     plural:         document.getElementById('q-plural'),
     sentence:       document.getElementById('q-sentence'),
     card:           document.getElementById('question-card'),
@@ -125,6 +126,7 @@ const Practice = (() => {
 
       e.caseChip.textContent = `${label.de} · ${label.en}`;
       e.noun.textContent = word.noun || '?';
+      if (e.translation) e.translation.textContent = word.en || '';
       e.plural.textContent = word.plural ? `Pl: ${word.plural}` : '';
 
       updateProgress();

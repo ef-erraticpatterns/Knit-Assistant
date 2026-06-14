@@ -145,6 +145,13 @@
   text-align: center;
   line-height: 1.1;
 }
+.question-translation {
+  font-size: 0.9rem;
+  color: var(--das);
+  font-style: italic;
+  letter-spacing: 0.01em;
+  min-height: 1.2em;
+}
 .question-plural {
   font-size: 0.85rem;
   color: var(--text-muted);

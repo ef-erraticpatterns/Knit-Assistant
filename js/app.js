@@ -4,6 +4,7 @@ const App = (() => {
   let state = null;
   let patternWeakness = null;
   let currentScreen = 'home';
+  let previewTimer = null;
 
   const SCREENS = ['home','dict','pro','stats','grammar'];
 
@@ -62,6 +63,23 @@ const App = (() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
+
+    // Intercept Android back button — set up AFTER DOM is ready and initConfirmDialog has run
+    history.pushState({ app: 'artikel-trainer' }, '');
+    window.addEventListener('popstate', () => {
+      history.pushState({ app: 'artikel-trainer' }, '');
+      if (document.body.classList.contains('practice-mode')) {
+        Practice.confirmExit();
+      } else if (currentScreen && currentScreen !== 'home') {
+        showScreen('home');
+      } else {
+        showConfirm(
+          'App schließen? / Close app?',
+          'Möchtest du die App wirklich schließen? · Do you want to close the app?',
+          () => window.close()
+        );
+      }
+    });
   }
 
   async function loadWords() {
@@ -87,13 +105,34 @@ const App = (() => {
     document.getElementById('btn-settings').addEventListener('click', openSettings);
   }
 
+  function startPreviewRotation() {
+    stopPreviewRotation();
+    previewTimer = setInterval(() => {
+      const card = document.getElementById('preview-card');
+      if (!card) return;
+      card.classList.add('preview-flip-out');
+      setTimeout(() => {
+        refreshPreviewCard();
+        card.classList.remove('preview-flip-out');
+        void card.offsetWidth;
+        card.classList.add('preview-flip-in');
+        setTimeout(() => card.classList.remove('preview-flip-in'), 350);
+      }, 220);
+    }, 5000);
+  }
+
+  function stopPreviewRotation() {
+    if (previewTimer) { clearInterval(previewTimer); previewTimer = null; }
+  }
+
   function showScreen(name) {
     if (name === 'home') {
       refreshDashboard();
-    } else if (name === 'stats') {
-      Stats.render(state);
-    } else if (name === 'grammar') {
-      Grammar.init();
+      startPreviewRotation();
+    } else {
+      stopPreviewRotation();
+      if (name === 'stats') Stats.render(state);
+      else if (name === 'grammar') Grammar.init();
     }
 
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -109,26 +148,6 @@ const App = (() => {
     // instead of leaving the app
     history.replaceState({ app: 'artikel-trainer' }, '');
   }
-
-  // Intercept Android back button
-  history.pushState({ app: 'artikel-trainer' }, '');
-  window.addEventListener('popstate', () => {
-    // Always re-push so we keep intercepting future back presses
-    history.pushState({ app: 'artikel-trainer' }, '');
-
-    if (document.body.classList.contains('practice-mode')) {
-      Practice.confirmExit();
-    } else if (currentScreen && currentScreen !== 'home') {
-      showScreen('home');
-    } else {
-      // On home screen — ask before closing
-      showConfirm(
-        'App schließen? / Close app?',
-        'Möchtest du die App wirklich schließen? · Do you want to close the app?',
-        () => { window.close(); }
-      );
-    }
-  });
 
   /* ── Header ── */
   function updateHeader() {
