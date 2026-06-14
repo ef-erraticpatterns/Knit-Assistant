@@ -113,17 +113,21 @@ const App = (() => {
   // Intercept Android back button
   history.pushState({ app: 'artikel-trainer' }, '');
   window.addEventListener('popstate', () => {
-    // Re-push so next back press is also intercepted
+    // Always re-push so we keep intercepting future back presses
     history.pushState({ app: 'artikel-trainer' }, '');
 
     if (document.body.classList.contains('practice-mode')) {
-      // In practice — ask to end session
       Practice.confirmExit();
     } else if (currentScreen && currentScreen !== 'home') {
-      // On a sub-screen — go back to home
       showScreen('home');
+    } else {
+      // On home screen — ask before closing
+      showConfirm(
+        'App schließen? / Close app?',
+        'Möchtest du die App wirklich schließen? · Do you want to close the app?',
+        () => { window.close(); }
+      );
     }
-    // On home screen — do nothing (back press absorbed, app stays open)
   });
 
   /* ── Header ── */
