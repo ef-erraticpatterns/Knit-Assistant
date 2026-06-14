@@ -2,7 +2,7 @@
   "name": "Artikel Trainer",
   "short_name": "Artikel",
   "description": "Learn German articles der, die, das across all four cases",
-  "start_url": "/Der-Die-Das/",
+  "start_url": "/Knit-Assistant/",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#1a1a2e",
@@ -20,7 +20,7 @@
     {
       "name": "Übung starten / Start Practice",
       "short_name": "Üben",
-      "url": "/Der-Die-Das/?screen=practice",
+      "url": "/Knit-Assistant/?screen=practice",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
