@@ -102,15 +102,7 @@ const App = (() => {
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.screen === name);
     });
-
-    // Update browser history for back-button support
-    history.pushState({ screen: name }, '', name === 'home' ? '/' : `/?s=${name}`);
   }
-
-  window.addEventListener('popstate', e => {
-    const s = e.state && e.state.screen;
-    if (s) showScreen(s);
-  });
 
   /* ── Header ── */
   function updateHeader() {

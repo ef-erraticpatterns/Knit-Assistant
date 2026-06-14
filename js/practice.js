@@ -71,15 +71,17 @@ const Practice = (() => {
   /* ── Card flip ── */
   function flipCard(callback) {
     const e = els();
-    e.card.classList.add('flip-out');
+    if (e.card) e.card.classList.add('flip-out');
     setTimeout(() => {
-      callback();
-      e.card.classList.remove('flip-out');
-      void e.card.offsetWidth;
-      e.card.classList.add('flip-in');
+      try { callback(); } catch (err) { console.error('flipCard callback error:', err); }
+      if (e.card) {
+        e.card.classList.remove('flip-out');
+        void e.card.offsetWidth;
+        e.card.classList.add('flip-in');
+      }
       setTimeout(() => {
-        e.card.classList.remove('flip-in');
-        transitioning = false;
+        if (e.card) e.card.classList.remove('flip-in');
+        transitioning = false; // always resets — no code path can leave it stuck
       }, 300);
     }, 180);
   }
