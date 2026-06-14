@@ -512,9 +512,10 @@ Next section (do NOT include its rows): ${nextTitle ? `"${nextTitle}"` : 'none �
 
 ACCURACY RULES — these matter most:
 - Output ONLY the rows/rounds the knitter works DURING this section. Stop where the next section begins.
-- The knitter has ALREADY finished every earlier section. Never repeat one-time setup steps that belong to an earlier section — e.g. casting on, returning held stitches to the needle, rejoining/reattaching yarn, or placing markers for the first time. If you see such a setup line, it belongs to the section where it first happens, not here.
+- The knitter has ALREADY finished every earlier section. Do NOT repeat global one-time setup steps that were already worked in an earlier section — for example, the very first cast-on, or a marker placement that was done in section 1. However: if THIS section is a joining, seaming, picking-up, or in-the-round-joining section, then placing stitches onto the needle, holding pieces together, or rejoining yarn ARE the core actions of this section — include them fully and do not skip them.
 - If THIS section is written by reference (e.g. "work same as front", "work as for back", "rep as for sleeve"), DO NOT output the reference sentence. Instead reproduce the ACTUAL rows from the referenced section that match THIS section's specific purpose. Example: a "Back Armhole Increases" section whose pattern text only says "work same as front" must contain the front's armhole-INCREASE rows — not the front's set-up or plain rows, and not the "rejoin yarn" line.
 - Every "original" must be a row/round the knitter actually works now in THIS section. If a row was already covered by a previous section, leave it out.
+- Copy stitch counts and row numbers EXACTLY from the pattern. Never paraphrase a count or silently change a number.
 
 WRITING RULES:
 - Write for a BEGINNER. Plain English for every instruction.
@@ -522,6 +523,9 @@ WRITING RULES:
 - Keep the exact pattern wording in "original". Write a friendly version in "plain".
 - Include every abbreviation used with a clear beginner explanation.
 - In "warnings", list 1–2 short sentences about common beginner mistakes or tricky moments specific to THIS section. Keep each warning under 15 words. Use an empty array if nothing is especially tricky.
+
+PHYSICAL TRANSITION RULE — critical for joining sections:
+Whenever the knitter must physically set up their work before the first stitch (joining two panels, placing held stitches back on the needle, picking up stitches along an edge, joining in the round, or holding two pieces together), make that setup its own numbered instruction BEFORE the first working row. In the "plain" field, describe: (1) which piece goes where and how the knitter holds it, (2) which side faces outward (RS or WS), (3) exactly which stitches come from which piece and in what order they land on the needle. Never use the word "join" without explaining physically what the knitter's hands do. If the pattern text is ambiguous about the join method, state the most beginner-safe interpretation and flag it in "warnings".
 
 Return ONLY valid JSON for this one section:
 {
@@ -541,7 +545,7 @@ Omit "highlight" only if the instruction has no specific stitch pattern notation
 
 Full pattern text:
 ${text.slice(0, 24000)}`,
-    'You are an expert knitting guide creator writing for beginners. You follow section boundaries exactly and never duplicate setup steps from earlier sections. Return ONLY valid JSON.',
+    'You are an expert knitting guide creator writing for beginners. You follow section boundaries exactly, never duplicate global one-time setup steps, but always fully describe physical joins, stitch transfers, and piece-assembly steps — these are the most confusing moments for beginners and must never be skipped or assumed. Return ONLY valid JSON.',
     4000
   );
   const result = parseAIJson(raw);
