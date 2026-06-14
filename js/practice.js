@@ -5,6 +5,7 @@ const Practice = (() => {
   let currentItem = null;
   let questionStartTime = 0;
   let answered = false;
+  let transitioning = false;
   let speedStreak = 0;
 
   const CASE_LABELS = {
@@ -59,6 +60,7 @@ const Practice = (() => {
     };
     speedStreak = 0;
     answered = false;
+    transitioning = false;
 
     document.body.classList.add('practice-mode');
     e.completeScreen.classList.add('hidden');
@@ -73,16 +75,30 @@ const Practice = (() => {
     setTimeout(() => {
       callback();
       e.card.classList.remove('flip-out');
-      void e.card.offsetWidth; // force reflow so animation restarts
+      void e.card.offsetWidth;
       e.card.classList.add('flip-in');
-      setTimeout(() => e.card.classList.remove('flip-in'), 350);
-    }, 200);
+      setTimeout(() => {
+        e.card.classList.remove('flip-in');
+        transitioning = false;
+      }, 300);
+    }, 180);
   }
 
   /* ── Show question ── */
   function showQuestion() {
+    if (transitioning) return; // prevent double-tap on Continue
+    transitioning = true;
+
     const e = els();
-    if (session.index >= session.queue.length) { endSession(); return; }
+
+    // Hide continue immediately so it can't be tapped again
+    e.continueBtn.classList.remove('show');
+
+    if (session.index >= session.queue.length) {
+      transitioning = false;
+      endSession();
+      return;
+    }
 
     flipCard(() => {
       currentItem = session.queue[session.index];
@@ -94,9 +110,7 @@ const Practice = (() => {
 
       e.card.className = 'question-card';
       e.tipCard.classList.add('hidden');
-      e.continueBtn.classList.remove('show');
 
-      // Sentence hidden before answer
       e.sentence.style.display = 'none';
       e.sentence.style.borderLeft = '';
       e.sentence.style.color = '';
@@ -108,7 +122,7 @@ const Practice = (() => {
       });
 
       e.caseChip.textContent = `${label.de} · ${label.en}`;
-      e.noun.textContent = word.noun;
+      e.noun.textContent = word.noun || '?';
       e.plural.textContent = word.plural ? `Pl: ${word.plural}` : '';
 
       updateProgress();
@@ -130,18 +144,26 @@ const Practice = (() => {
     answered = true;
 
     const e = els();
+
+    // Resolve correct answer safely — never crash even on bad word data
+    let correctArticle = 'der';
+    try {
+      const { word, cas } = currentItem;
+      const caseData = (word.cases && (word.cases[cas] || word.cases.nominative))
+                     || { article: word.article || 'der' };
+      correctArticle = caseData.article;
+    } catch (_) { /* bad word data — fall through with default */ }
+
     const { word, cas } = currentItem;
-    const caseData = word.cases[cas] || word.cases.nominative;
-    const correctArticle = caseData.article;
     const responseMs = Date.now() - questionStartTime;
     const wasCorrect = chosenArticle === correctArticle;
     const xp = calcXPForAnswer(wasCorrect, responseMs);
 
-    // Visual feedback on buttons
+    // Visual feedback
     const btnMap = { der: e.derBtn, die: e.dieBtn, das: e.dasBtn };
-    btnMap[chosenArticle].classList.add(wasCorrect ? 'selected-correct' : 'selected-wrong');
-    if (!wasCorrect) btnMap[correctArticle].classList.add('selected-correct');
-    Object.values(btnMap).forEach(btn => btn.classList.add('disabled'));
+    if (btnMap[chosenArticle]) btnMap[chosenArticle].classList.add(wasCorrect ? 'selected-correct' : 'selected-wrong');
+    if (!wasCorrect && btnMap[correctArticle]) btnMap[correctArticle].classList.add('selected-correct');
+    Object.values(btnMap).forEach(btn => btn && btn.classList.add('disabled'));
 
     if (wasCorrect) {
       e.card.classList.add('correct');
@@ -152,26 +174,26 @@ const Practice = (() => {
       speedStreak = 0;
     }
 
-    // Update session counts SYNCHRONOUSLY — must happen before continue is tapped
+    // Update session counts SYNCHRONOUSLY — index advances immediately
     if (wasCorrect) { session.correct++; session.xpEarned += xp; }
     else            { session.wrong++; }
     session.speedStreak = Math.max(session.speedStreak, speedStreak);
     session.wordsDetail.push({ wordId: word.id, correct: wasCorrect, case: cas, timeTaken: responseMs / 1000 });
-    session.index++; // ← moved here so Continue always shows the right next card
+    session.index++;
 
-    // Show sentence / tip after answer
+    // Show post-answer content
     showPostAnswerContent(word, cas, correctArticle, wasCorrect);
 
-    // Show continue button — index already correct
+    // Show continue button
     const isLast = session.index >= session.queue.length;
     e.continueBtn.classList.add('show');
     e.continueBtn.textContent = isLast ? 'Fertig! / Done! 🎉' : 'Weiter / Continue ›';
     e.xpDisplay.textContent = session.xpEarned + ' XP';
 
-    // Persist progress in background — any error is non-fatal, never blocks UI
+    // Persist in background — never blocks UI
     try {
       const progress = await Store.getWordProgress(word.id);
-      progress.errorsByCase = progress.errorsByCase || { nominative:0, accusative:0, dative:0, genitive:0 };
+      progress.errorsByCase    = progress.errorsByCase    || { nominative:0, accusative:0, dative:0, genitive:0 };
       progress.errorsByArticle = progress.errorsByArticle || { der:0, die:0, das:0 };
       if (!wasCorrect) {
         progress.errorsByCase[cas] = (progress.errorsByCase[cas] || 0) + 1;
@@ -220,7 +242,9 @@ const Practice = (() => {
   }
 
   function calcXPForAnswer(wasCorrect, responseMs) {
-    return Gamification.calcXP(wasCorrect, responseMs, App.getState().user.currentStreak, true);
+    try {
+      return Gamification.calcXP(wasCorrect, responseMs, App.getState().user.currentStreak, true);
+    } catch (_) { return wasCorrect ? 10 : 0; }
   }
 
   function floatXP(card, xp) {
@@ -309,6 +333,7 @@ const Practice = (() => {
     document.body.classList.remove('practice-mode');
     session = null;
     answered = false;
+    transitioning = false;
     App.showScreen('home');
     App.refreshDashboard();
   }
