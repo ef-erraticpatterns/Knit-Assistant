@@ -1,0 +1,4 @@
+__pycache__/
+*.db
+claude_inbox.json
+.claude/

@@ -1,0 +1,21 @@
+name: Sync to Der-Die-Das
+
+on:
+  push:
+    branches: [claude/german-article-learner-o3b6gg]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: claude/german-article-learner-o3b6gg
+          fetch-depth: 0
+
+      - name: Push to Der-Die-Das
+        run: |
+          git remote add target https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/ef-erraticpatterns/Der-Die-Das.git
+          git push target HEAD:main --force

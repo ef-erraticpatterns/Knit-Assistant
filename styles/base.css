@@ -1,0 +1,163 @@
+/* ── CSS Custom Properties ── */
+:root {
+  /* Article colors */
+  --der: #4a9eff;
+  --der-bg: rgba(74, 158, 255, 0.15);
+  --die: #ff6b8a;
+  --die-bg: rgba(255, 107, 138, 0.15);
+  --das: #ffd166;
+  --das-bg: rgba(255, 209, 102, 0.15);
+
+  /* UI colors */
+  --bg: #08090d;
+  --surface: #0f1117;
+  --surface-2: #181c27;
+  --surface-3: #1e2330;
+  --border: rgba(255,255,255,0.12);
+  --accent: #06d6a0;
+  --accent-bg: rgba(6, 214, 160, 0.15);
+  --error: #ef476f;
+  --error-bg: rgba(239, 71, 111, 0.15);
+  --warning: #ffd166;
+  --success: #06d6a0;
+
+  /* Text */
+  --text: #eaeaea;
+  --text-muted: rgba(234, 234, 234, 0.55);
+  --text-faint: rgba(234, 234, 234, 0.3);
+
+  /* Spacing */
+  --gap: 16px;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --radius-sm: 8px;
+
+  /* Safe areas */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-height: 64px;
+  --header-height: 56px;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none; /* prevent pull-to-refresh and swipe navigation */
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input { font-family: inherit; }
+a { color: inherit; text-decoration: none; }
+ul, ol { list-style: none; }
+img, svg { display: block; }
+
+/* ── Typography ── */
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+.text-2xl { font-size: 1.5rem; }
+.text-3xl { font-size: 2rem; }
+.text-4xl { font-size: 2.5rem; }
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.font-medium { font-weight: 500; }
+.text-muted { color: var(--text-muted); }
+.text-faint { color: var(--text-faint); }
+.text-center { text-align: center; }
+.text-accent { color: var(--accent); }
+
+/* ── Article color classes ── */
+.article-der { color: var(--der); }
+.article-die { color: var(--die); }
+.article-das { color: var(--das); }
+.badge-der { background: var(--der-bg); color: var(--der); border: 1px solid rgba(74,158,255,0.3); }
+.badge-die { background: var(--die-bg); color: var(--die); border: 1px solid rgba(255,107,138,0.3); }
+.badge-das { background: var(--das-bg); color: var(--das); border: 1px solid rgba(255,209,102,0.3); }
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.w-full { width: 100%; }
+.flex-1 { flex: 1; }
+.overflow-hidden { overflow: hidden; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+
+/* ── Article badge pill ── */
+.article-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: lowercase;
+  flex-shrink: 0;
+}
+
+/* ── Surface card ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--gap);
+}
+.card-lg {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: calc(var(--gap) * 1.5);
+}
+
+/* ── Toast ── */
+#toast {
+  position: fixed;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 90vw;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }

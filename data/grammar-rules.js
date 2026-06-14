@@ -1,0 +1,297 @@
+window.GermanData = window.GermanData || {};
+window.GermanData.grammarRules = [
+  /* ── Suffix rules → die (feminine) ── */
+  {
+    id: 'rule-ung-die',
+    category: 'suffix', article: 'die',
+    title: 'Endung -ung → immer die',
+    titleEn: 'Ending -ung → always die',
+    description: 'Alle Nomen mit der Endung -ung sind feminin.',
+    descriptionEn: 'All nouns ending in -ung are feminine.',
+    pattern: /ung$/,
+    examples: ['die Bildung','die Wohnung','die Zeitung','die Lösung','die Übung','die Planung'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-heit-die',
+    category: 'suffix', article: 'die',
+    title: 'Endung -heit → immer die',
+    titleEn: 'Ending -heit → always die',
+    description: 'Nomen mit -heit sind immer feminin.',
+    descriptionEn: 'Nouns ending in -heit are always feminine.',
+    pattern: /heit$/,
+    examples: ['die Freiheit','die Schönheit','die Gesundheit','die Sicherheit','die Einheit'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-keit-die',
+    category: 'suffix', article: 'die',
+    title: 'Endung -keit → immer die',
+    titleEn: 'Ending -keit → always die',
+    description: 'Nomen mit -keit sind immer feminin.',
+    descriptionEn: 'Nouns ending in -keit are always feminine.',
+    pattern: /keit$/,
+    examples: ['die Möglichkeit','die Fähigkeit','die Dankbarkeit','die Wirklichkeit'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-schaft-die',
+    category: 'suffix', article: 'die',
+    title: 'Endung -schaft → immer die',
+    titleEn: 'Ending -schaft → always die',
+    description: 'Alle Nomen mit -schaft sind feminin.',
+    descriptionEn: 'All nouns ending in -schaft are feminine.',
+    pattern: /schaft$/,
+    examples: ['die Gesellschaft','die Wirtschaft','die Wissenschaft','die Freundschaft','die Gemeinschaft'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-ion-die',
+    category: 'suffix', article: 'die',
+    title: 'Endung -tion, -ion, -sion → die',
+    titleEn: 'Ending -tion, -ion, -sion → die',
+    description: 'Lehnwörter auf -tion, -ion oder -sion sind feminin.',
+    descriptionEn: 'Loanwords ending in -tion, -ion, -sion are feminine.',
+    pattern: /(tion|sion|ion)$/,
+    examples: ['die Situation','die Nation','die Organisation','die Diskussion','die Funktion'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-taet-die',
+    category: 'suffix', article: 'die',
+    title: 'Endung -tät → die',
+    titleEn: 'Ending -tät → die',
+    description: 'Nomen auf -tät (aus dem Lateinischen) sind feminin.',
+    descriptionEn: 'Nouns ending in -tät (from Latin) are feminine.',
+    pattern: /tät$/,
+    examples: ['die Qualität','die Universität','die Kapazität','die Realität','die Aktivität'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-ie-die',
+    category: 'suffix', article: 'die',
+    title: 'Endung -ie → meist die',
+    titleEn: 'Ending -ie → mostly die',
+    description: 'Die meisten Nomen auf -ie sind feminin.',
+    descriptionEn: 'Most nouns ending in -ie are feminine.',
+    pattern: /ie$/,
+    examples: ['die Demokratie','die Energie','die Theorie','die Biologie','die Strategie'],
+    exceptions: ['der Knie (das Knie)'],
+    confidence: 'high'
+  },
+  {
+    id: 'rule-ik-die',
+    category: 'suffix', article: 'die',
+    title: 'Endung -ik → meist die',
+    titleEn: 'Ending -ik → mostly die',
+    description: 'Nomen auf -ik sind meistens feminin.',
+    descriptionEn: 'Nouns ending in -ik are mostly feminine.',
+    pattern: /ik$/,
+    examples: ['die Musik','die Politik','die Technik','die Mathematik','die Klinik'],
+    exceptions: ['der Atlantik','der Pazifik (masculine)'],
+    confidence: 'high'
+  },
+  {
+    id: 'rule-ur-die',
+    category: 'suffix', article: 'die',
+    title: 'Endung -ur → meist die',
+    titleEn: 'Ending -ur → mostly die',
+    description: 'Nomen auf -ur sind oft feminin.',
+    descriptionEn: 'Nouns ending in -ur are often feminine.',
+    pattern: /ur$/,
+    examples: ['die Natur','die Kultur','die Literatur','die Figur','die Struktur'],
+    exceptions: ['das Futur, der Humor'],
+    confidence: 'high'
+  },
+  /* ── Suffix rules → das (neuter) ── */
+  {
+    id: 'rule-chen-das',
+    category: 'suffix', article: 'das',
+    title: 'Endung -chen, -lein → immer das',
+    titleEn: 'Ending -chen, -lein → always das',
+    description: 'Verkleinerungsformen auf -chen und -lein sind immer Neutrum.',
+    descriptionEn: 'Diminutives ending in -chen and -lein are always neuter.',
+    pattern: /(chen|lein)$/,
+    examples: ['das Mädchen','das Häuschen','das Büchlein','das Kätzchen','das Bächlein'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-um-das',
+    category: 'suffix', article: 'das',
+    title: 'Endung -um, -ium → meist das',
+    titleEn: 'Ending -um, -ium → mostly das',
+    description: 'Lateinische Endungen -um und -ium sind meist Neutrum.',
+    descriptionEn: 'Latin endings -um and -ium are mostly neuter.',
+    pattern: /(um|ium)$/,
+    examples: ['das Museum','das Zentrum','das Aquarium','das Minimum','das Medium'],
+    exceptions: ['der Humus, der Rhythmus'],
+    confidence: 'high'
+  },
+  {
+    id: 'rule-ment-das',
+    category: 'suffix', article: 'das',
+    title: 'Endung -ment → meist das',
+    titleEn: 'Ending -ment → mostly das',
+    description: 'Nomen auf -ment sind meistens Neutrum.',
+    descriptionEn: 'Nouns ending in -ment are mostly neuter.',
+    pattern: /ment$/,
+    examples: ['das Dokument','das Instrument','das Argument','das Parlament','das Element'],
+    exceptions: ['der Zement'],
+    confidence: 'high'
+  },
+  /* ── Suffix rules → der (masculine) ── */
+  {
+    id: 'rule-er-der',
+    category: 'suffix', article: 'der',
+    title: 'Endung -er (Berufe/Personen) → meist der',
+    titleEn: 'Ending -er (persons, professions) → mostly der',
+    description: 'Personen und Berufe auf -er sind meistens maskulin.',
+    descriptionEn: 'Persons and professions ending in -er are mostly masculine.',
+    pattern: /er$/,
+    examples: ['der Lehrer','der Fahrer','der Bäcker','der Computer','der Manager'],
+    exceptions: ['die Mutter, die Schwester, die Tochter, das Messer, das Wasser, das Zimmer'],
+    confidence: 'medium'
+  },
+  {
+    id: 'rule-ist-der',
+    category: 'suffix', article: 'der',
+    title: 'Endung -ist (männl. Person) → der',
+    titleEn: 'Ending -ist (male person) → der',
+    description: 'Berufe und Rollen auf -ist sind maskulin.',
+    descriptionEn: 'Professions and roles ending in -ist are masculine.',
+    pattern: /ist$/,
+    examples: ['der Journalist','der Aktivist','der Optimist','der Tourist','der Spezialist'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-ismus-der',
+    category: 'suffix', article: 'der',
+    title: 'Endung -ismus → der',
+    titleEn: 'Ending -ismus → der',
+    description: 'Ideologien und Konzepte auf -ismus sind maskulin.',
+    descriptionEn: 'Ideologies and concepts ending in -ismus are masculine.',
+    pattern: /ismus$/,
+    examples: ['der Kapitalismus','der Sozialismus','der Tourismus','der Realismus'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  /* ── Semantic rules ── */
+  {
+    id: 'rule-weekdays-der',
+    category: 'semantic', article: 'der',
+    title: 'Wochentage → der',
+    titleEn: 'Days of the week → der',
+    description: 'Alle Wochentage sind maskulin.',
+    descriptionEn: 'All days of the week are masculine.',
+    pattern: null,
+    examples: ['der Montag','der Dienstag','der Mittwoch','der Donnerstag','der Freitag'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-months-der',
+    category: 'semantic', article: 'der',
+    title: 'Monate → der',
+    titleEn: 'Months → der',
+    description: 'Alle Monate sind maskulin.',
+    descriptionEn: 'All months are masculine.',
+    pattern: null,
+    examples: ['der Januar','der Februar','der März','der April','der Mai'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-seasons-der',
+    category: 'semantic', article: 'der',
+    title: 'Jahreszeiten → der',
+    titleEn: 'Seasons → der',
+    description: 'Alle vier Jahreszeiten sind maskulin.',
+    descriptionEn: 'All four seasons are masculine.',
+    pattern: null,
+    examples: ['der Frühling','der Sommer','der Herbst','der Winter'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-weather-der',
+    category: 'semantic', article: 'der',
+    title: 'Wetter-Erscheinungen → meist der',
+    titleEn: 'Weather phenomena → mostly der',
+    description: 'Viele Wetterphänomene sind maskulin.',
+    descriptionEn: 'Many weather phenomena are masculine.',
+    pattern: null,
+    examples: ['der Regen','der Wind','der Schnee','der Frost','der Nebel'],
+    exceptions: ['das Eis, die Wolke, das Gewitter'],
+    confidence: 'high'
+  },
+  {
+    id: 'rule-colors-das',
+    category: 'semantic', article: 'das',
+    title: 'Farbnomen → das',
+    titleEn: 'Colors used as nouns → das',
+    description: 'Wenn Farbadjektive als Nomen verwendet werden, ist der Artikel das.',
+    descriptionEn: 'When color adjectives are used as nouns, they take das.',
+    pattern: null,
+    examples: ['das Blau des Himmels','das Rot der Rose','das Grün der Wiese'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  /* ── Case rules ── */
+  {
+    id: 'rule-accusative-masculine',
+    category: 'case', article: null,
+    title: 'Akkusativ: nur Maskulinum ändert sich',
+    titleEn: 'Accusative: only masculine changes',
+    description: 'Im Akkusativ wird "der" zu "den". Die und das bleiben unverändert!',
+    descriptionEn: 'In the Accusative, "der" changes to "den". Die and das stay the same!',
+    pattern: null,
+    examples: ['Ich sehe den Mann. (nicht: der Mann)','Ich kaufe die Tasche. (bleibt die)','Ich esse das Brot. (bleibt das)'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-dative-changes',
+    category: 'case', article: null,
+    title: 'Dativ: alle Artikel ändern sich',
+    titleEn: 'Dative: all articles change',
+    description: 'Im Dativ: der→dem, die→der, das→dem, die(Pl)→den.',
+    descriptionEn: 'In the Dative: der→dem, die→der, das→dem, die(pl)→den.',
+    pattern: null,
+    examples: ['Ich gebe dem Mann. (der→dem)','Ich gebe der Frau. (die→der)','Ich gebe dem Kind. (das→dem)'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  {
+    id: 'rule-genitive-es',
+    category: 'case', article: null,
+    title: 'Genitiv: maskulin/neutral + -(e)s',
+    titleEn: 'Genitive: masculine/neuter nouns add -(e)s',
+    description: 'Im Genitiv bekommen maskuline und neutrale Nomen die Endung -s oder -es.',
+    descriptionEn: 'In the Genitive, masculine and neuter nouns add -s or -es.',
+    pattern: null,
+    examples: ['des Mannes, des Kindes, des Hauses','Feminine: der Frau (keine Endung!)'],
+    exceptions: [],
+    confidence: 'very-high'
+  },
+  /* ── Exceptions ── */
+  {
+    id: 'rule-weak-nouns',
+    category: 'exception', article: 'der',
+    title: 'N-Deklination (schwache Maskulina)',
+    titleEn: 'N-declension (weak masculine nouns)',
+    description: 'Einige maskuline Nomen enden im Akkusativ, Dativ und Genitiv auf -n oder -en.',
+    descriptionEn: 'Some masculine nouns add -n or -en in all cases except nominative.',
+    pattern: null,
+    examples: ['der Mensch → den Menschen, dem Menschen','der Student → den Studenten','der Name → des Namens (Ausnahme)'],
+    exceptions: [],
+    confidence: 'very-high'
+  }
+];

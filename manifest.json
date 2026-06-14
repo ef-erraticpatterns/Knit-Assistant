@@ -1,0 +1,27 @@
+{
+  "name": "Artikel Trainer",
+  "short_name": "Artikel",
+  "description": "Learn German articles der, die, das across all four cases",
+  "start_url": "/Knit-Assistant/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "orientation": "portrait",
+  "lang": "de",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-green-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-yellow-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-red-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }
+  ],
+  "categories": ["education", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Übung starten / Start Practice",
+      "short_name": "Üben",
+      "url": "/Knit-Assistant/?screen=practice",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Artikel Trainer" />
+  <meta name="description" content="Lerne der, die, das in allen deutschen Fällen. Learn German articles in all four cases." />
+  <title>Artikel Trainer</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles/base.css" />
+  <link rel="stylesheet" href="styles/layout.css" />
+  <link rel="stylesheet" href="styles/dashboard.css" />
+  <link rel="stylesheet" href="styles/practice.css" />
+  <link rel="stylesheet" href="styles/dictionary.css" />
+  <link rel="stylesheet" href="styles/stats.css" />
+  <link rel="stylesheet" href="styles/grammar.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Header ── -->
+  <header id="app-header">
+    <div>
+      <div class="logo">Artikel <span>Trainer</span></div>
+      <div class="header-sub">der · die · das</div>
+    </div>
+    <div id="header-right">
+      <span class="header-streak">🔥 0</span>
+      <span class="header-xp">0 XP</span>
+      <button id="btn-settings" aria-label="Einstellungen / Settings">⚙</button>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 1 — HOME / DASHBOARD
+  ══════════════════════════════════════════ -->
+  <section id="screen-home" class="screen active">
+
+    <!-- Notification banner -->
+    <div id="notif-banner" class="hidden">
+      <span class="notif-icon">🔔</span>
+      <div class="notif-text">
+        <strong>Tägliche Erinnerungen · Daily reminders</strong>
+        <span>Lass dich jeden Tag erinnern, zu üben. · Get reminded to practice every day.</span>
+      </div>
+      <button id="btn-enable-notif">Aktivieren</button>
+      <button id="btn-dismiss-notif">✕</button>
+    </div>
+
+    <!-- Preview word card (tap to start practice) -->
+    <div id="preview-card" class="preview-word-card">
+      <div class="preview-case-chip" id="preview-case">Nominativ · Nominative</div>
+      <div class="preview-noun" id="preview-noun">Welt</div>
+      <div class="preview-hint">Tippe zum Üben · Tap to practice ›</div>
+    </div>
+
+    <!-- CTA button -->
+    <button id="btn-start-practice" class="btn-cta">
+      Übung starten · Start Practice
+      <span class="cta-sub">Täglich 20 Wörter · 20 words daily</span>
+    </button>
+
+    <!-- Ring + chips side by side -->
+    <div class="home-middle-row">
+      <div class="hero-ring">
+        <svg viewBox="0 0 140 140">
+          <circle class="ring-bg" cx="70" cy="70" r="58" />
+          <circle class="ring-fill" cx="70" cy="70" r="58"
+            stroke-dasharray="365" stroke-dashoffset="365" />
+        </svg>
+        <div class="hero-ring-center">
+          <span class="ring-count">0</span>
+          <span class="ring-goal">/ 20</span>
+          <span class="ring-label">heute · today</span>
+        </div>
+      </div>
+      <div class="home-chips-stack">
+        <div class="stat-chip streak"><span class="chip-icon">🔥</span><span id="chip-streak">0 Tage</span></div>
+        <div class="stat-chip level"><span class="chip-icon">🎓</span><span id="chip-level">Anfänger</span></div>
+        <div class="stat-chip xp"><span class="chip-icon">⭐</span><span id="chip-xp">0 XP</span></div>
+      </div>
+    </div>
+
+    <!-- Today's stats -->
+    <div class="today-card">
+      <div class="today-card-title">Heute · Today</div>
+      <div class="today-stats">
+        <div class="today-stat correct">
+          <div class="ts-val" id="today-correct">0</div>
+          <div class="ts-label">Richtig · Correct</div>
+        </div>
+        <div class="today-stat wrong">
+          <div class="ts-val" id="today-wrong">0</div>
+          <div class="ts-label">Falsch · Wrong</div>
+        </div>
+        <div class="today-stat accuracy">
+          <div class="ts-val" id="today-accuracy">—</div>
+          <div class="ts-label">Genauigkeit · Accuracy</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick action grid (2 cards) -->
+    <div class="quick-grid">
+      <div class="quick-card" data-screen="dict">
+        <div class="qc-icon">📖</div>
+        <div class="qc-name">Wörterbuch</div>
+        <div class="qc-sub">Dictionary · 1000+ words</div>
+      </div>
+      <div class="quick-card" data-screen="grammar">
+        <div class="qc-icon">📐</div>
+        <div class="qc-name">Artikel-Regeln</div>
+        <div class="qc-sub">Grammar rules</div>
+      </div>
+    </div>
+
+    <!-- CTA button -->
+    <button id="btn-start-practice" class="btn-cta">
+      Übung starten · Start Practice
+      <span class="cta-sub">Täglich 20 Wörter · 20 words daily</span>
+    </button>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 2 — DAILY PRACTICE
+  ══════════════════════════════════════════ -->
+  <section id="screen-practice" class="screen">
+
+    <!-- Top bar -->
+    <div class="practice-topbar">
+      <button id="btn-exit-practice" aria-label="Beenden / Exit">✕</button>
+      <div class="practice-progress-wrap">
+        <div class="practice-progress-bar">
+          <div class="practice-progress-fill" id="practice-prog-fill"></div>
+        </div>
+        <div class="practice-progress-text" id="practice-prog-text">0 / 20</div>
+      </div>
+      <div class="practice-xp-display" id="practice-xp">0 XP</div>
+    </div>
+
+    <!-- Question card -->
+    <div class="practice-card-area">
+      <div class="question-card" id="question-card">
+        <div class="case-chip" id="q-case-chip">Nominativ · Nominative</div>
+        <div class="question-noun" id="q-noun">Haus</div>
+        <div class="question-translation" id="q-translation"></div>
+        <div class="question-plural" id="q-plural">Pl: Häuser</div>
+        <div class="question-sentence" id="q-sentence" style="display:none"></div>
+
+        <!-- Tip card (hidden until wrong answer) -->
+        <div class="tip-card hidden" id="tip-card">
+          <div class="tip-header">💡 Merkhilfe · Remember</div>
+          <div class="tip-rule" id="tip-rule"></div>
+          <div class="tip-en" id="tip-en"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Article buttons -->
+    <div class="article-buttons">
+      <button class="article-btn der-btn" id="btn-der">
+        <span class="btn-article">der</span>
+        <span class="btn-sub">maskulin · masculine</span>
+      </button>
+      <button class="article-btn die-btn" id="btn-die">
+        <span class="btn-article">die</span>
+        <span class="btn-sub">feminin · feminine</span>
+      </button>
+      <button class="article-btn das-btn" id="btn-das">
+        <span class="btn-article">das</span>
+        <span class="btn-sub">neutral · neuter</span>
+      </button>
+    </div>
+
+    <!-- Continue button -->
+    <button id="btn-continue">Weiter · Continue</button>
+
+    <!-- Session complete overlay -->
+    <div id="session-complete" class="hidden">
+      <div class="session-emoji" id="session-emoji">🎉</div>
+      <div class="session-title" id="session-title">Gut gemacht! / Well done!</div>
+      <div class="session-sub" id="session-sub"></div>
+      <div class="session-stats">
+        <div class="session-stat correct"><div class="ss-val" id="ss-correct">0</div><div class="ss-label">Richtig · Right</div></div>
+        <div class="session-stat wrong"><div class="ss-val" id="ss-wrong">0</div><div class="ss-label">Falsch · Wrong</div></div>
+        <div class="session-stat xp"><div class="ss-val" id="ss-xp">+0</div><div class="ss-label">XP verdient</div></div>
+      </div>
+      <button class="btn-done" id="btn-done">Zurück zur Startseite · Back to Home</button>
+    </div>
+
+    <!-- Confetti container -->
+    <div class="confetti-wrap" id="confetti-wrap"></div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 3 — DICTIONARY
+  ══════════════════════════════════════════ -->
+  <section id="screen-dict" class="screen">
+
+    <div class="dict-search-bar">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="dict-search-input" placeholder="Wort suchen… / Search word…" autocomplete="off" autocorrect="off" />
+        <button id="btn-clear-search" class="hidden">✕</button>
+      </div>
+      <div class="filter-chips">
+        <button class="filter-chip active" data-filter="all">Alle · All</button>
+        <button class="filter-chip der" data-filter="der">der</button>
+        <button class="filter-chip die" data-filter="die">die</button>
+        <button class="filter-chip das" data-filter="das">das</button>
+      </div>
+    </div>
+
+    <div class="dict-count" id="dict-count">120 Wörter · words</div>
+
+    <div id="dict-list" style="flex:1;overflow-y:auto;position:relative;">
+      <div class="dict-list-inner" style="position:relative;"></div>
+    </div>
+
+    <!-- Word detail panel (slides in) -->
+    <div id="word-detail">
+      <div class="word-detail-header">
+        <button id="btn-back-dict">‹</button>
+        <span class="word-detail-title">Wortdetails · Word details</span>
+      </div>
+      <div class="word-detail-body">
+        <div class="word-hero">
+          <div class="word-hero-article"></div>
+          <div class="word-hero-noun"></div>
+          <div class="word-hero-plural"></div>
+          <span class="word-hero-domain"></span>
+        </div>
+
+        <div class="card">
+          <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px">Deklination · Declension</div>
+          <div class="declension-table-wrap">
+            <table class="declension-table"></table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:10px">Beispiele · Examples</div>
+          <div class="examples-list"></div>
+        </div>
+
+        <div class="word-tip-card">
+          <span class="tip-lamp">💡</span>
+          <div class="tip-text"></div>
+        </div>
+
+        <button class="btn-add-queue">+ Zur Übung hinzufügen · Add to practice queue</button>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 5 — STATISTICS
+  ══════════════════════════════════════════ -->
+  <section id="screen-stats" class="screen">
+    <div class="stats-content">
+
+      <!-- Level progress -->
+      <div class="level-bar-wrap">
+        <div class="level-bar-header">
+          <span class="level-name" id="level-name">Anfänger · Beginner</span>
+          <span class="level-next" id="level-next">100 XP bis nächstes Level</span>
+        </div>
+        <div class="level-bar-track">
+          <div class="level-bar-fill" id="level-bar-fill" style="width:0%"></div>
+        </div>
+        <div class="level-xp-label" id="level-xp-label">0 / 100 XP</div>
+      </div>
+
+      <!-- All-time stats -->
+      <div class="alltime-grid">
+        <div class="alltime-card streak">
+          <div class="alltime-val" id="stat-streak">0</div>
+          <div class="alltime-label">Aktueller Streak<br>Current streak</div>
+        </div>
+        <div class="alltime-card streak">
+          <div class="alltime-val" id="stat-longest">0</div>
+          <div class="alltime-label">Längster Streak<br>Longest streak</div>
+        </div>
+        <div class="alltime-card xp">
+          <div class="alltime-val" id="stat-xp">0</div>
+          <div class="alltime-label">Gesamt XP<br>Total XP</div>
+        </div>
+        <div class="alltime-card words">
+          <div class="alltime-val" id="stat-words">0</div>
+          <div class="alltime-label">Wörter geübt<br>Words practiced</div>
+        </div>
+        <div class="alltime-card accuracy">
+          <div class="alltime-val" id="stat-accuracy">—</div>
+          <div class="alltime-label">Genauigkeit<br>Accuracy</div>
+        </div>
+        <div class="alltime-card words">
+          <div class="alltime-val" id="stat-mastered">0</div>
+          <div class="alltime-label">Gemeistert<br>Mastered</div>
+        </div>
+      </div>
+
+      <!-- Streak calendar -->
+      <div class="streak-calendar-card">
+        <div class="streak-calendar-title">🗓 Streak-Kalender · Streak Calendar</div>
+        <div class="streak-calendar-grid" id="streak-calendar-grid"></div>
+        <div class="cal-legend">
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--surface-2)"></div>Kein Üben</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:rgba(6,214,160,0.3)"></div>Begonnen</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--accent)"></div>Ziel erreicht</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--das)"></div>Perfekt</div>
+        </div>
+      </div>
+
+      <!-- Error pattern insight -->
+      <div class="insight-card good" id="insight-card">
+        <div class="insight-icon">✨</div>
+        <div class="insight-title">Noch keine Daten · No data yet</div>
+        <div class="insight-text">Übe täglich, um dein Fehlermuster zu sehen. · Practice daily to see your error patterns.</div>
+      </div>
+
+      <!-- Article error chart -->
+      <div class="error-card">
+        <div class="error-card-title">Fehler nach Artikel · Errors by article</div>
+        <div class="bar-chart" id="article-error-chart">
+          <div class="bar-row"><span class="bar-label article-der">der</span><div class="bar-track"><div class="bar-fill der" style="width:0%"></div></div><span class="bar-count">0</span></div>
+          <div class="bar-row"><span class="bar-label article-die">die</span><div class="bar-track"><div class="bar-fill die" style="width:0%"></div></div><span class="bar-count">0</span></div>
+          <div class="bar-row"><span class="bar-label article-das">das</span><div class="bar-track"><div class="bar-fill das" style="width:0%"></div></div><span class="bar-count">0</span></div>
+        </div>
+      </div>
+
+      <!-- Case error chart -->
+      <div class="error-card">
+        <div class="error-card-title">Fehler nach Fall · Errors by case</div>
+        <div class="bar-chart" id="case-error-chart">
+          <div class="bar-row"><span class="bar-label">Nominativ</span><div class="bar-track"><div class="bar-fill nominative" style="width:0%"></div></div><span class="bar-count">0</span></div>
+          <div class="bar-row"><span class="bar-label">Akkusativ</span><div class="bar-track"><div class="bar-fill accusative" style="width:0%"></div></div><span class="bar-count">0</span></div>
+          <div class="bar-row"><span class="bar-label">Dativ</span><div class="bar-track"><div class="bar-fill dative" style="width:0%"></div></div><span class="bar-count">0</span></div>
+          <div class="bar-row"><span class="bar-label">Genitiv</span><div class="bar-track"><div class="bar-fill genitive" style="width:0%"></div></div><span class="bar-count">0</span></div>
+        </div>
+      </div>
+
+      <!-- Top mistakes table -->
+      <div class="error-card">
+        <div class="error-card-title">Häufigste Fehler · Most common mistakes</div>
+        <div class="error-card-sub">Wörter, bei denen du oft Fehler machst · Words you often get wrong</div>
+        <table class="mistakes-table">
+          <thead>
+            <tr>
+              <th>Wort · Word</th>
+              <th>Artikel</th>
+              <th>Fehler · Errors</th>
+              <th>Datum · Date</th>
+            </tr>
+          </thead>
+          <tbody id="top-mistakes-table">
+            <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">Noch keine Fehler · No mistakes yet 🎉</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Data actions -->
+      <div class="data-actions">
+        <button class="btn-data-action" id="btn-export-data">📤 Daten exportieren · Export data</button>
+        <button class="btn-data-action danger" id="btn-reset-data">🗑 Alle Daten löschen · Delete all data</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 6 — GRAMMAR REFERENCE
+  ══════════════════════════════════════════ -->
+  <section id="screen-grammar" class="screen">
+
+    <div class="grammar-search-bar">
+      <div class="grammar-search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="grammar-search-input" placeholder="Regel suchen… / Search rule…" autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="grammar-tabs">
+      <div class="grammar-tab active" data-tab="rules">Artikel-Regeln · Article Rules</div>
+      <div class="grammar-tab" data-tab="cases">Kasus-Tabellen · Case Tables</div>
+      <div class="grammar-tab" data-tab="exceptions">Ausnahmen · Exceptions</div>
+    </div>
+
+    <div class="grammar-content" id="grammar-content">
+      <div class="spinner"></div>
+    </div>
+
+  </section>
+
+  <!-- ── Bottom Navigation ── -->
+  <nav id="bottom-nav">
+    <button class="nav-btn active" data-screen="home">
+      <span class="nav-icon-circle home-circle"><span class="nav-icon">🏠</span></span>
+      <span>Home</span>
+    </button>
+    <button class="nav-btn" data-screen="dict">
+      <span class="nav-icon-circle dict-circle"><span class="nav-icon">📖</span></span>
+      <span>Wörterbuch</span>
+    </button>
+    <button class="nav-btn" data-screen="stats">
+      <span class="nav-icon-circle stats-circle"><span class="nav-icon">📊</span></span>
+      <span>Statistiken</span>
+    </button>
+    <button class="nav-btn" data-screen="grammar">
+      <span class="nav-icon-circle grammar-circle"><span class="nav-icon">📝</span></span>
+      <span>Grammatik</span>
+    </button>
+  </nav>
+
+</div><!-- /#app -->
+
+<!-- ── Global overlays ── -->
+
+<!-- Badge unlock overlay -->
+<div id="badge-overlay" class="hidden">
+  <div class="badge-unlock-icon" id="badge-unlock-icon">🎯</div>
+  <div class="badge-unlock-title" id="badge-unlock-title">Abzeichen freigeschaltet!</div>
+  <div class="badge-unlock-name" id="badge-unlock-name"></div>
+  <button class="badge-unlock-close" id="btn-badge-close">Weiter · Continue</button>
+</div>
+
+<!-- Settings modal -->
+<div id="settings-modal" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Einstellungen · Settings</div>
+    <div class="modal-subtitle">Passe die App an · Customize the app</div>
+
+    <div class="level-bar-wrap" style="margin-bottom:16px">
+      <div class="level-bar-header">
+        <span class="level-name" id="level-name">Anfänger</span>
+        <span class="level-next" id="level-next"></span>
+      </div>
+      <div class="level-bar-track"><div class="level-bar-fill" id="level-bar-fill" style="width:0%"></div></div>
+      <div class="level-xp-label" id="level-xp-label"></div>
+    </div>
+
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Tagesziel · Daily goal</div>
+        <div class="settings-sub">Wie viele Wörter pro Tag? · Words per day?</div>
+      </div>
+      <input type="number" class="settings-number-input" id="settings-goal" min="5" max="100" value="20" />
+    </div>
+
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Alle 4 Fälle · All 4 cases</div>
+        <div class="settings-sub">Nom, Akk, Dat, Gen üben · Practice all cases</div>
+      </div>
+      <div class="toggle on" id="toggle-cases"></div>
+    </div>
+
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Profivokabular · Professional vocab</div>
+        <div class="settings-sub">Fachbegriffe in die Übung einbeziehen · Include professional terms</div>
+      </div>
+      <div class="toggle" id="toggle-pro"></div>
+    </div>
+
+    <div class="settings-row" style="border-bottom:none">
+      <button class="btn-data-action" id="btn-close-settings" style="width:100%;margin-top:8px">Schließen · Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div id="confirm-dialog" class="confirm-dialog hidden">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">Bist du sicher? · Are you sure?</div>
+    <div class="confirm-text" id="confirm-text"></div>
+    <div class="confirm-actions">
+      <button class="btn-confirm-cancel" id="btn-confirm-cancel">Abbrechen · Cancel</button>
+      <button class="btn-confirm-ok" id="btn-confirm-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ── Scripts ── -->
+<script src="data/grammar-rules.js"></script>
+<script src="data/words-core.js"></script>
+<script src="data/words-professional.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/store.js"></script>
+<script src="js/gamification.js"></script>
+<script src="js/adaptive.js"></script>
+<script src="js/practice.js"></script>
+<script src="js/dictionary.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/grammar.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
