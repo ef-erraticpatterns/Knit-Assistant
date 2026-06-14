@@ -1206,27 +1206,32 @@ async function askSectionAdjustment(projectId, sectionId, userText) {
     : 'n/a';
 
   const raw = await callAI(
-    `You are advising a beginner knitter who has deviated from the pattern.
+    `You are advising a beginner knitter who has deviated from the pattern. Your job is to give a practical, honest, encouraging verdict — not to make them feel bad or insist on perfection.
 
 Pattern: ${p.guide?.patternName || p.name || 'pattern'}
 Current section: "${s.title}" (${s.type || 'section'})
 What this section does: ${s.description || '(no description)'}
-Instructions for this section:
+Current section instructions:
 ${instrText}
 Progress: ${target}
 
 The knitter says:
 "${userText}"
 
-Judge how much this deviation matters for THIS section. Small stitch-count differences (1–2 sts) are often fine in plain body/stockinette areas, but matter a lot where shaping, symmetry or fit depend on exact counts (armholes, necklines, shoulders, raglan lines), or where a later step needs an exact number.
+JUDGING RULES:
+- Plain stockinette body: 1–2 stitch differences are almost always "safe" — fixable invisibly in the next round.
+- Shaping rows (armholes, necklines, raglan lines, shoulders): exact counts matter more because they affect symmetry and fit.
+- A mistake that has already been knitted several rounds past is usually better corrected going forward (e.g. an extra kfb in the next round) than ripped back, unless the structure is fundamentally wrong.
+- If you are not certain whether the deviation affects this particular pattern, say so honestly rather than guessing.
+- Never say "you must rip back" unless the structural issue is serious enough that continuing would make the garment unwearable.
 
 Return ONLY valid JSON:
 {
   "verdict": "safe" | "caution" | "avoid",
-  "advice": "2–4 short, encouraging sentences in plain English. If safe: say so and explain exactly how to adjust the remaining rows or counts to work with their actual number. If caution: explain the risk and how to decide. If avoid: gently explain why keeping it changes the shape/fit, and what to do instead.",
-  "adjusted": "optional corrected version of the current instruction using their numbers, or empty string"
+  "advice": "2–4 short, encouraging sentences. For 'safe': confirm it's fine, explain why, and give the exact fix going forward. For 'caution': explain the specific risk in plain terms and what the knitter should check before deciding. For 'avoid': explain clearly (without alarm) what would go wrong and what to do instead — only suggest ripping back if absolutely necessary.",
+  "adjusted": "optional: a corrected version of the relevant instruction using the knitter's actual numbers, or empty string"
 }`,
-    'You are an expert knitting advisor. You give accurate, practical, encouraging guidance to beginners and make smart judgments about when pattern deviations are safe to keep. Return ONLY valid JSON.',
+    'You are an expert, warm knitting advisor. You give honest, practical, encouraging guidance. You default to helping the knitter continue safely rather than ripping back unless the issue is structural. Return ONLY valid JSON.',
     1200
   );
 
@@ -1417,20 +1422,27 @@ function renderGlossary(filter) {
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 function buildSystemPrompt() {
-  let prompt = `You are a friendly and knowledgeable knitting expert assistant. Help with:
-- Reading and understanding knitting patterns
-- Explaining abbreviations and stitch techniques step by step
-- Troubleshooting mistakes and fixing errors
-- Yarn, needle, and tool recommendations
-- Pattern math, sizing, and modifications
+  let prompt = `You are a warm, experienced knitting teacher helping a real person through a real project. Follow these rules in order of priority:
 
-Be concise and practical. When using jargon, explain it clearly.`;
+1. PATTERN TEXT IS GROUND TRUTH. When the user asks what the pattern says, quote it exactly from the text provided below. Do not rely on your general training knowledge if the actual pattern text is available — trust the text, not your assumptions.
+
+2. PRACTICAL RECOVERY FIRST. If the knitter has already done something, help them continue safely rather than insisting they rip back. In plain stockinette, a 1–2 stitch difference is almost always fixable in the next round and undetectable in the finished garment. Only recommend ripping back for structural issues: a twisted join, working in the wrong direction, or a count error large enough to affect fit.
+
+3. BE SPECIFIC AND HONEST. If you are not certain what the pattern says for a specific step, say so plainly rather than inventing an answer. It is much better to say "I cannot see that part of the pattern — can you check page X?" than to give confident but wrong instructions.
+
+4. EXPLAIN THE WHY. Don't just say what to do — say why it matters (or why it doesn't). A knitter who understands the reason can make their own judgment calls.
+
+5. ENCOURAGE. Knitting is forgiving. Use reassuring language. End each answer with a clear next step the knitter can take right now.
+
+Always explain technique names when you use them. Never say "just join" or "just pick up stitches" — describe the physical actions.`;
+
   const p = activeProject();
   if (p && p.steps.length > 0) {
     prompt += `\n\nThe user is working on a project called "${p.name}" with these steps: ${p.steps.map(s => `"${s.name}"`).join(', ')}.`;
   }
   if (p?.patternText) {
-    prompt += `\n\nThe user has uploaded a knitting pattern. Here is the pattern text (may be truncated):\n\n${p.patternText.slice(0, 3000)}`;
+    // Give as much of the pattern as fits — the join/body sections are often well into the document
+    prompt += `\n\nFULL PATTERN TEXT (quote this directly when answering questions about what the pattern says):\n\n${p.patternText.slice(0, 12000)}`;
   }
   // Active section context — gives the AI precise "where am I now" information
   const section = activeSectionId && p?.guide?.sections.find(s => s.id === activeSectionId);
@@ -1444,8 +1456,8 @@ Be concise and practical. When using jargon, explain it clearly.`;
       prompt += `\n\nKnown tricky points for this section:\n${section.warnings.map(w => `- ${w}`).join('\n')}`;
     }
     if (section.instructions?.length > 0) {
-      const instrText = section.instructions.slice(0, 8).map((instr, i) => `${i + 1}. ${instr.plain}`).join('\n');
-      prompt += `\n\nInstructions for this section:\n${instrText}`;
+      const instrText = section.instructions.map((instr, i) => `${i + 1}. ${instr.plain}${instr.original ? `  [pattern: ${instr.original}]` : ''}`).join('\n');
+      prompt += `\n\nGenerated instructions for this section (AI-written summary — the full pattern text above takes precedence):\n${instrText}`;
     }
   }
   return prompt;
