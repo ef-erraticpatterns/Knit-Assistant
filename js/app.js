@@ -3,6 +3,7 @@ const App = (() => {
 
   let state = null;
   let patternWeakness = null;
+  let currentScreen = 'home';
 
   const SCREENS = ['home','dict','pro','stats','grammar'];
 
@@ -102,7 +103,28 @@ const App = (() => {
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.screen === name);
     });
+
+    currentScreen = name;
+    // Keep a dummy history entry so the Android back button fires popstate
+    // instead of leaving the app
+    history.replaceState({ app: 'artikel-trainer' }, '');
   }
+
+  // Intercept Android back button
+  history.pushState({ app: 'artikel-trainer' }, '');
+  window.addEventListener('popstate', () => {
+    // Re-push so next back press is also intercepted
+    history.pushState({ app: 'artikel-trainer' }, '');
+
+    if (document.body.classList.contains('practice-mode')) {
+      // In practice — ask to end session
+      Practice.confirmExit();
+    } else if (currentScreen && currentScreen !== 'home') {
+      // On a sub-screen — go back to home
+      showScreen('home');
+    }
+    // On home screen — do nothing (back press absorbed, app stays open)
+  });
 
   /* ── Header ── */
   function updateHeader() {
