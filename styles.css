@@ -949,6 +949,13 @@ body.fb-picking * { cursor: crosshair !important; }
   animation: shimmer-pulse 1.4s ease-in-out infinite;
 }
 @keyframes shimmer-pulse { 0%,100%{opacity:.4} 50%{opacity:.9} }
+.guide-load-error { font-size: .82rem; color: var(--text-muted); padding: 6px 0; }
+.guide-retry-btn {
+  background: none; border: 1px solid var(--accent2); color: var(--accent);
+  border-radius: 6px; padding: 3px 10px; font-size: .8rem; cursor: pointer;
+  margin-left: 4px;
+}
+.guide-retry-btn:hover { background: var(--accent2); color: #fff; }
 .guide-instr-highlight {
   display: block; margin: 4px 0 6px;
   background: rgba(105,64,165,0.12); color: #6940a5;

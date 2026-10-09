@@ -405,6 +405,8 @@ function parseAIJson(raw) {
 async function callAI(userContent, systemContent, maxTokens) {
   const key = localStorage.getItem('orApiKey');
   if (!key) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 90000);
   try {
     const body = {
       model: localStorage.getItem('orModel') || 'google/gemini-2.5-flash',
@@ -414,6 +416,7 @@ async function callAI(userContent, systemContent, maxTokens) {
     if (maxTokens) body.max_tokens = maxTokens;
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
@@ -425,7 +428,7 @@ async function callAI(userContent, systemContent, maxTokens) {
     if (!res.ok) return null;
     const d = await res.json();
     return d.choices[0].message.content;
-  } catch { return null; }
+  } catch { return null; } finally { clearTimeout(timeout); }
 }
 
 async function runPhase1(text) {
@@ -621,6 +624,29 @@ async function refixGuideInstructions(projectId) {
   closeWizard();
   renderProject();
   alert('Instruction wording refreshed for all sections — your progress was kept.');
+}
+
+async function retrySectionInstructions(projectId, sectionId) {
+  const p = getProject(projectId);
+  if (!p?.guide?.sections) return;
+  const sections = p.guide.sections;
+  const index = sections.findIndex(s => s.id === sectionId);
+  if (index === -1) return;
+  if (!localStorage.getItem('orApiKey')) {
+    alert('Set up your OpenRouter API key in the AI Chat tab first.');
+    switchView('chat');
+    return;
+  }
+  const s = sections[index];
+  s._loading = true;
+  save(state);
+  renderProject();
+  const text = p.patternText || '';
+  const instructions = await runPhase2Section(text, s, { sections, index });
+  s.instructions = instructions;
+  s._loading = false;
+  save(state);
+  renderProject();
 }
 
 // ── Wizard ────────────────────────────────────────────────────────────────────
@@ -983,6 +1009,16 @@ function buildGuideSection(projectId, section, isActive, isLocked) {
   if (section._loading) {
     const shimmer = el('div', 'guide-loading-shimmer', 'Loading instructions…');
     body.appendChild(shimmer);
+  } else if (!section.instructions?.length) {
+    const errRow = document.createElement('div');
+    errRow.className = 'guide-load-error';
+    errRow.innerHTML = '⚠️ Instructions didn\'t load. ';
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'guide-retry-btn';
+    retryBtn.textContent = 'Tap to retry';
+    retryBtn.addEventListener('click', () => retrySectionInstructions(projectId, section.id));
+    errRow.appendChild(retryBtn);
+    body.appendChild(errRow);
   }
 
   // Instructions
@@ -1543,9 +1579,12 @@ async function sendChatMessage() {
   isChatLoading = true;
   renderChat();
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
   try {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
@@ -1567,8 +1606,12 @@ async function sendChatMessage() {
     const data = await res.json();
     chatHistory.push({ role: 'assistant', content: data.choices[0].message.content });
   } catch (e) {
-    chatHistory.push({ role: 'assistant', content: `⚠️ ${e.message}. Check your API key in settings (⚙).` });
+    const msg = e.name === 'AbortError'
+      ? '⏱ Request timed out. Check your connection and try again.'
+      : `⚠️ ${e.message}. Check your API key in settings (⚙).`;
+    chatHistory.push({ role: 'assistant', content: msg });
   } finally {
+    clearTimeout(timeout);
     isChatLoading = false;
     const p = activeProject();
     if (p) { p.chatHistory = chatHistory.slice(-50); save(state); }
