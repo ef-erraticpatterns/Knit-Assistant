@@ -2099,9 +2099,22 @@ function exportData() {
 function importData(file) {
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = e => importFromText(e.target.result);
+  reader.readAsText(file);
+}
+
+function startImport() {
+  if (confirm('Import from a backup file?\n\nOK = choose a file\nCancel = paste copied backup text instead')) {
+    document.getElementById('import-file-input').click();
+    return;
+  }
+  const text = prompt('Paste your backup text (everything starting with { ):');
+  if (text && text.trim()) importFromText(text.trim());
+}
+
+function importFromText(text) {
     try {
-      const imported = JSON.parse(e.target.result);
+      const imported = JSON.parse(text);
       if (!Array.isArray(imported?.projects)) {
         alert('This file doesn\'t look like a Knit Assistant backup.');
         return;
@@ -2127,10 +2140,8 @@ function importData(file) {
       render();
       alert(`Import complete — ${state.projects.length} project(s) loaded.`);
     } catch {
-      alert('Could not read the backup file. Make sure it\'s a valid Knit Assistant JSON export.');
+      alert('Could not read the backup. Make sure you copied the whole text, starting with { and ending with }.');
     }
-  };
-  reader.readAsText(file);
 }
 
 document.getElementById('export-btn').addEventListener('click', exportData);
@@ -2140,13 +2151,8 @@ document.getElementById('import-file-input').addEventListener('change', e => {
   e.target.value = '';
 });
 
-document.getElementById('import-btn').addEventListener('click', () => {
-  document.getElementById('import-file-input').click();
-});
-
-document.getElementById('empty-import-btn').addEventListener('click', () => {
-  document.getElementById('import-file-input').click();
-});
+document.getElementById('import-btn').addEventListener('click', startImport);
+document.getElementById('empty-import-btn').addEventListener('click', startImport);
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 render();
