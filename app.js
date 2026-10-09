@@ -352,9 +352,12 @@ async function sendChatMessage() {
   isChatLoading = true;
   renderChat();
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
   try {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
@@ -376,8 +379,12 @@ async function sendChatMessage() {
     const data = await res.json();
     chatHistory.push({ role: 'assistant', content: data.choices[0].message.content });
   } catch (e) {
-    chatHistory.push({ role: 'assistant', content: `⚠️ ${e.message}. Check your API key in settings (⚙).` });
+    const msg = e.name === 'AbortError'
+      ? '⏱ Request timed out after 30 s. Check your connection and try again.'
+      : `⚠️ ${e.message}. Check your API key in settings (⚙).`;
+    chatHistory.push({ role: 'assistant', content: msg });
   } finally {
+    clearTimeout(timeout);
     isChatLoading = false;
     renderChat();
   }
