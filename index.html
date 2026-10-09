@@ -17,15 +17,19 @@
     <header>
       <h1>🧶 Knit Assistant</h1>
       <button id="refresh-app-btn" class="icon-btn secondary" title="Update to the latest version">↻</button>
+      <button id="export-btn" class="icon-btn secondary" title="Export backup">⬇</button>
+      <button id="import-btn" class="icon-btn secondary" title="Import backup">⬆</button>
       <button id="add-project-btn" class="icon-btn" title="New project">＋</button>
       <button id="chat-settings-btn" class="icon-btn secondary hidden" title="API key settings">⚙</button>
     </header>
+    <input type="file" id="import-file-input" accept=".json" style="display:none" />
 
     <nav id="project-tabs" role="tablist"></nav>
 
     <main id="project-view">
       <div id="empty-state">
         <p>No projects yet.<br/>Tap <strong>＋</strong> to create your first project.</p>
+        <p class="empty-state-hint">Had projects before? <button id="empty-import-btn" class="btn-link">Restore from backup ↑</button></p>
       </div>
     </main>
 

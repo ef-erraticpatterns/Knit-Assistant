@@ -78,6 +78,8 @@ main {
 }
 
 #empty-state { text-align: center; color: var(--text-muted); margin-top: 80px; line-height: 1.8; }
+.empty-state-hint { font-size: 0.85rem; margin-top: 16px; }
+.btn-link { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; font-size: inherit; padding: 0; }
 
 /* ── Project view ── */
 .project-header {

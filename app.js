@@ -2082,6 +2082,78 @@ document.getElementById('chat-settings-btn').addEventListener('click', () => {
   }
 });
 
+// ── Data export / import ──────────────────────────────────────────────────────
+function exportData() {
+  const exportState = { ...stateForServer(), exportedAt: new Date().toISOString(), exportedFrom: window.location.origin };
+  const blob = new Blob([JSON.stringify(exportState, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'knit-assistant-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importData(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => importFromText(e.target.result);
+  reader.readAsText(file);
+}
+
+function startImport() {
+  if (confirm('Import from a backup file?\n\nOK = choose a file\nCancel = paste copied backup text instead')) {
+    document.getElementById('import-file-input').click();
+    return;
+  }
+  const text = prompt('Paste your backup text (everything starting with { ):');
+  if (text && text.trim()) importFromText(text.trim());
+}
+
+function importFromText(text) {
+    try {
+      const imported = JSON.parse(text);
+      if (!Array.isArray(imported?.projects)) {
+        alert('This file doesn\'t look like a Knit Assistant backup.');
+        return;
+      }
+      const hasExisting = state.projects.length > 0;
+      let merge = false;
+      if (hasExisting) {
+        merge = confirm(
+          `You have ${state.projects.length} existing project(s) and the backup has ${imported.projects.length} project(s).\n\n` +
+          `OK = Merge (keep all, skip duplicates)\nCancel = Replace all with backup`
+        );
+      }
+      if (merge) {
+        const existingIds = new Set(state.projects.map(p => p.id));
+        const newProjects = imported.projects.filter(p => !existingIds.has(p.id));
+        state.projects.push(...newProjects);
+        if (!state.activeId && state.projects.length > 0) state.activeId = state.projects[0].id;
+      } else {
+        state.projects = imported.projects;
+        state.activeId = imported.activeId || state.projects[0]?.id || null;
+      }
+      save(state);
+      render();
+      alert(`Import complete — ${state.projects.length} project(s) loaded.`);
+    } catch {
+      alert('Could not read the backup. Make sure you copied the whole text, starting with { and ending with }.');
+    }
+}
+
+document.getElementById('export-btn').addEventListener('click', exportData);
+
+document.getElementById('import-file-input').addEventListener('change', e => {
+  importData(e.target.files[0]);
+  e.target.value = '';
+});
+
+document.getElementById('import-btn').addEventListener('click', startImport);
+document.getElementById('empty-import-btn').addEventListener('click', startImport);
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 render();
 switchView('projects');
