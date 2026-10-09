@@ -129,6 +129,12 @@ if (typeof pdfjsLib !== 'undefined') {
 }
 
 let state = load();
+// Reset any _loading flags left over from a previous session that crashed or timed out.
+// Nothing can actually be loading on a fresh app start, so a stale true means stuck-forever.
+state.projects.forEach(p => {
+  p.guide?.sections?.forEach(s => { if (s._loading) s._loading = false; });
+});
+
 let currentView = 'projects';
 let chatHistory = [];
 let activeSectionId = null;
